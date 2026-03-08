@@ -1,0 +1,16 @@
+[Unit]
+Description=BCK Manager Web Interface
+After=network.target caddy.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/bck_manager_web
+EnvironmentFile=/opt/bck_manager_web/.env
+ExecStart=/opt/bck_manager_web/venv/bin/uvicorn backend.main:app \
+    --host ${BCK_WEB_HOST} --port ${BCK_WEB_PORT} --no-access-log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

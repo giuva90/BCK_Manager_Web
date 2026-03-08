@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* BCK Manager Web — Dark DevOps theme */
+:root {
+  --color-primary: #06b6d4;       /* cyan-500 */
+  --color-primary-hover: #22d3ee; /* cyan-400 */
+  --color-success: #22c55e;       /* green-500 */
+  --color-danger: #ef4444;        /* red-500 */
+  --color-warning: #f59e0b;       /* amber-500 */
+  --color-running: #3b82f6;       /* blue-500 */
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Monospace for logs, paths, cron, terminal */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=BCK Manager Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/bck_manager_agent
+EnvironmentFile=/opt/bck_manager_agent/.env
+ExecStart=/opt/bck_manager_agent/venv/bin/python agent_main.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
