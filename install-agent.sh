@@ -3,7 +3,7 @@
 # Usage: sudo bash install-agent.sh
 set -euo pipefail
 
-AGENT_DIR="/opt/bck-manager-agent"
+AGENT_DIR="/opt/bck_manager_agent"
 VENV_DIR="$AGENT_DIR/venv"
 SERVICE_USER="bckagent"
 

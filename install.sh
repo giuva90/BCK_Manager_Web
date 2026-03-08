@@ -3,7 +3,7 @@
 # Usage: sudo bash install.sh
 set -euo pipefail
 
-APP_DIR="/opt/bck-manager-web"
+APP_DIR="/opt/bck_manager_web"
 VENV_DIR="$APP_DIR/venv"
 FRONTEND_DIR="$APP_DIR/frontend"
 SERVICE_USER="bckweb"
@@ -16,6 +16,18 @@ NC='\033[0m'
 log()  { echo -e "${GREEN}[+]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+
+require_node_20() {
+    if ! command -v node &>/dev/null; then
+        err "Node.js is required to build the frontend"
+    fi
+
+    local node_major
+    node_major=$(node -p "process.versions.node.split('.')[0]")
+    if [[ "$node_major" -lt 20 ]]; then
+        err "Node.js 20+ is required to build the frontend (detected $(node -v))"
+    fi
+}
 
 # Check root
 [[ $EUID -ne 0 ]] && err "This script must be run as root"
@@ -67,6 +79,7 @@ log "Python dependencies installed"
 # ── Frontend build ───────────────────────────────────────────────
 if [[ -d "frontend" ]]; then
     log "Building frontend…"
+    require_node_20
     cd frontend
     npm ci --silent 2>/dev/null || npm install --silent
     npm run build

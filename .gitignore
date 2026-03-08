@@ -3,6 +3,7 @@
 # ============================================================================
 
 BCK_Manager/*
+BCK_Manager
 
 # --- Credentials & secrets ---
 # Never commit the actual config with real credentials
@@ -32,6 +33,11 @@ venv/
 env/
 .env/
 ENV/
+
+# --- Environment files ---
+.env
+.env.*
+!.env.example
 
 # --- Logs ---
 *.log

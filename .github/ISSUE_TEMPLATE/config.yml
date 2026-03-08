@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Deployment and operations guide
+    url: https://github.com/giuva90/BCK_Manager_Web/blob/main/docs/DEPLOYMENT.md
+    about: Review installation and infrastructure guidance before opening an issue.
+  - name: Architecture reference
+    url: https://github.com/giuva90/BCK_Manager_Web/blob/main/docs/ARCHITECTURE.md
+    about: Review the system design and topology documentation.
