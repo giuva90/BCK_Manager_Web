@@ -137,4 +137,45 @@ Production deployment assumes:
 - local `.env` files for runtime secrets;
 - a backup strategy for the SQLite metadata database and BCK Manager config.
 
+## Logging
+
+Both the web application and the remote agent use Python's standard `logging` module.
+
+### Configuration
+
+| Component | Level variable | File variable | Default path |
+| --- | --- | --- | --- |
+| Web | `BCK_WEB_LOG_LEVEL` | `BCK_WEB_LOG_FILE` | `/var/log/bck_manager_web/web.log` |
+| Agent | `BCK_AGENT_LOG_LEVEL` | `BCK_AGENT_LOG_FILE` | `/var/log/bck_manager_agent/agent.log` |
+
+### Outputs
+
+Each component writes to two destinations simultaneously:
+
+1. **Console (stdout)** — captured by systemd/journald.
+2. **Rotating file** — 10 MB per file, 5 backups retained.
+
+### Log hierarchy
+
+The web application organises loggers hierarchically:
+
+- `bck_web` — application lifecycle
+- `bck_web.auth` — login, logout, token refresh
+- `bck_web.jobs` — job CRUD
+- `bck_web.run` — job execution
+- `bck_web.fleet` — fleet / agent management
+- `bck_web.setup` — initial setup
+- `bck_web.database` — database init
+- `bck_web.config_manager` — config YAML operations
+- `bck_web.cron` — cron sync
+- `bck_web.ssh` — SSH remote commands
+- `bck_web.update_checker` — version checking
+- `bck_web.log_watcher` — log streaming
+- `bck_bridge` — BCK Manager API bridge
+- `agent_hub` — agent WebSocket sessions
+- `terminal_manager` — terminal sessions
+- `agent` — remote agent process
+
+Set the level to `DEBUG` to get full request-level details, command output, and WebSocket message traces.
+
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the operational details.

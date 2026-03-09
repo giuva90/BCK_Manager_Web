@@ -58,6 +58,8 @@ BCK_MANAGER_PATH=/opt/bck_manager
 BCK_CONFIG_PATH=/opt/bck_manager/config.yaml
 BCK_LOG_PATH=/var/log/bck_manager.log
 BCK_WEB_DB_PATH=/opt/bck_manager_web/data/bck_manager_web.db
+BCK_WEB_LOG_LEVEL=INFO
+BCK_WEB_LOG_FILE=/var/log/bck_manager_web/web.log
 ```
 
 6. Enable and start the service:
@@ -97,6 +99,8 @@ BCK_AGENT_HUB_URL=wss://hub.example.com/api/v1/fleet/agent-ws
 BCK_AGENT_AGENT_TOKEN=<token-from-hub>
 BCK_AGENT_BCK_MANAGER_PATH=/opt/bck_manager
 BCK_AGENT_CONFIG_PATH=/opt/bck_manager/config.yaml
+BCK_AGENT_LOG_LEVEL=INFO
+BCK_AGENT_LOG_FILE=/var/log/bck_manager_agent/agent.log
 ```
 
 3. Enable and start the service:
@@ -135,8 +139,42 @@ Important groups:
 - JWT secret and token lifetimes.
 - BCK Manager integration paths.
 - SQLite metadata database path.
+- Logging level and log file paths.
 - Update checker metadata.
 - Caddy/TLS variables.
+
+### Logging Configuration
+
+#### Web Interface
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BCK_WEB_LOG_LEVEL` | `INFO` | Python log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `BCK_WEB_LOG_FILE` | `/var/log/bck_manager_web/web.log` | Absolute path to the web application log file |
+
+#### Agent
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BCK_AGENT_LOG_LEVEL` | `INFO` | Python log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `BCK_AGENT_LOG_FILE` | `/var/log/bck_manager_agent/agent.log` | Absolute path to the agent log file |
+
+Logs are written simultaneously to:
+
+1. **stdout/stderr** — captured by `journalctl` when running as a systemd service.
+2. **rotating log files** — 10 MB per file, 5 backup files retained.
+
+Set the level to `DEBUG` for maximum verbosity during troubleshooting.  Revert to `INFO` or `WARNING` for normal operation.
+
+```bash
+# Example: enable debug logging for the web interface
+sudo sed -i 's/^BCK_WEB_LOG_LEVEL=.*/BCK_WEB_LOG_LEVEL=DEBUG/' /opt/bck_manager_web/.env
+sudo systemctl restart bck-manager-web
+
+# View logs
+tail -f /var/log/bck_manager_web/web.log
+sudo journalctl -u bck-manager-web -f
+```
 
 ## Reverse Proxy And TLS
 
@@ -167,6 +205,9 @@ Typical flow:
 sudo systemctl status bck-manager-web
 sudo journalctl -u bck-manager-web -f
 sudo systemctl restart bck-manager-web
+
+# Log file (in addition to journalctl)
+tail -f /var/log/bck_manager_web/web.log
 ```
 
 ### Agent
@@ -175,6 +216,9 @@ sudo systemctl restart bck-manager-web
 sudo systemctl status bck-manager-agent
 sudo journalctl -u bck-manager-agent -f
 sudo systemctl restart bck-manager-agent
+
+# Log file (in addition to journalctl)
+tail -f /var/log/bck_manager_agent/agent.log
 ```
 
 ## Data And Backup Strategy
@@ -213,6 +257,10 @@ Recommended upgrade flow:
 
 ## Troubleshooting
 
+### Enable debug logging
+
+Set `BCK_WEB_LOG_LEVEL=DEBUG` (or `BCK_AGENT_LOG_LEVEL=DEBUG` for the agent) in the corresponding `.env` file and restart the service.  Debug mode logs every command, SQL query detail, SSH session, and WebSocket message.
+
 ### Installer fails on Node version
 
 The frontend build requires Node.js 20+.
@@ -224,6 +272,7 @@ Check:
 - `BCK_MANAGER_PATH`
 - `BCK_CONFIG_PATH`
 - file permissions on the BCK Manager config
+- web log file for errors: `tail -f /var/log/bck_manager_web/web.log`
 
 ### Logs page is empty
 
@@ -237,6 +286,7 @@ Check:
 - TLS trust and WebSocket path
 - `BCK_AGENT_HUB_URL`
 - `BCK_AGENT_AGENT_TOKEN`
+- agent log file: `tail -f /var/log/bck_manager_agent/agent.log`
 
 ### Terminal access fails
 
@@ -250,4 +300,6 @@ Check both user-side and server-side terminal allowlists in the application.
 - Restrict SSH credentials for hub-managed nodes.
 - Protect `.env` with filesystem permissions.
 - Back up the SQLite metadata database and BCK Manager config.
+- Verify log file paths are writable by the service user.
+- Set `BCK_WEB_LOG_LEVEL=INFO` for production (use `DEBUG` only for troubleshooting).
 - Review GitHub issue reports carefully because they are currently the public support channel.
