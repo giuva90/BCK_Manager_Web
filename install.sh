@@ -95,6 +95,14 @@ fi
 
 # ── Environment file ─────────────────────────────────────────────
 ENV_FILE="$APP_DIR/.env"
+
+# ── Data directory ───────────────────────────────────────────────
+mkdir -p "$APP_DIR/data"
+
+# ── Log directory ────────────────────────────────────────────────
+mkdir -p /var/log/bck_manager_web
+chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_web
+
 if [[ ! -f "$ENV_FILE" ]]; then
     log "Creating .env from template…"
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(64))")
@@ -115,13 +123,6 @@ EOF
 else
     warn ".env already exists — not overwriting"
 fi
-
-# ── Data directory ───────────────────────────────────────────────
-mkdir -p "$APP_DIR/data"
-
-# ── Log directory ────────────────────────────────────────────────
-mkdir -p /var/log/bck_manager_web
-chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_web
 
 # ── Ownership ────────────────────────────────────────────────────
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"

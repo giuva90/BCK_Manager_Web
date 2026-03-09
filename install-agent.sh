@@ -51,6 +51,10 @@ python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip -q
 "$VENV_DIR/bin/pip" install -r "$AGENT_DIR/requirements.txt" -q
 
+# ── Log directory ────────────────────────────────────────────────
+mkdir -p /var/log/bck_manager_agent
+chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_agent
+
 # ── Environment ──────────────────────────────────────────────────
 ENV_FILE="$AGENT_DIR/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -70,10 +74,6 @@ fi
 
 # ── Ownership ────────────────────────────────────────────────────
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$AGENT_DIR"
-
-# ── Log directory ────────────────────────────────────────────────
-mkdir -p /var/log/bck_manager_agent
-chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_agent
 
 # ── Systemd ──────────────────────────────────────────────────────
 SERVICE_FILE="/etc/systemd/system/bck-manager-agent.service"
