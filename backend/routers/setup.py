@@ -3,6 +3,8 @@
 Returns 410 Gone once the first user exists.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session, select, func
 
@@ -14,6 +16,8 @@ from backend.schemas.user import SetupRequest, UserRead
 
 from datetime import datetime, timezone
 import json
+
+logger = logging.getLogger("bck_web.setup")
 
 router = APIRouter(tags=["setup"])
 
@@ -34,6 +38,7 @@ async def setup(
     # Check if any users exist
     count = session.exec(select(func.count()).select_from(User)).one()
     if count > 0:
+        logger.warning("Setup endpoint called but users already exist")
         raise HTTPException(status.HTTP_410_GONE, "Setup already completed")
 
     user = User(
@@ -46,6 +51,8 @@ async def setup(
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    logger.info("Initial admin user created: username=%s", user.username)
 
     access, a_jti, a_exp = create_access_token(user.username, user.role)
     refresh, r_jti, r_exp = create_refresh_token(user.username, user.role)

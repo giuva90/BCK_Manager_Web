@@ -8,7 +8,7 @@ User=root
 WorkingDirectory=/opt/bck_manager_web
 EnvironmentFile=/opt/bck_manager_web/.env
 ExecStart=/opt/bck_manager_web/venv/bin/uvicorn backend.main:app \
-    --host ${BCK_WEB_HOST} --port ${BCK_WEB_PORT} --no-access-log
+    --host ${BCK_WEB_HOST} --port ${BCK_WEB_PORT}
 Restart=always
 RestartSec=5
 

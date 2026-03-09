@@ -106,6 +106,7 @@ sudo systemctl start bck-manager-agent
 - The web application stores app metadata in SQLite. Backup jobs remain sourced from the BCK Manager configuration.
 - Do not expose the Uvicorn bind directly to the Internet. Place Caddy or another reverse proxy in front of it.
 - Secrets belong in `.env` and the BCK Manager configuration, never in Git.
+- Logs are written to both stdout (captured by journald) and rotating log files. Configure log level and path via `BCK_WEB_LOG_LEVEL` / `BCK_WEB_LOG_FILE` (web) or `BCK_AGENT_LOG_LEVEL` / `BCK_AGENT_LOG_FILE` (agent). Set level to `DEBUG` for troubleshooting.
 - Public GitHub issues are the current support channel. See [.github/SECURITY.md](.github/SECURITY.md) before reporting security-sensitive issues.
 
 ## Version

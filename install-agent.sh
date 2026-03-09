@@ -51,6 +51,10 @@ python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip -q
 "$VENV_DIR/bin/pip" install -r "$AGENT_DIR/requirements.txt" -q
 
+# ── Log directory ────────────────────────────────────────────────
+mkdir -p /var/log/bck_manager_agent
+chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_agent
+
 # ── Environment ──────────────────────────────────────────────────
 ENV_FILE="$AGENT_DIR/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -59,6 +63,8 @@ BCK_AGENT_HUB_URL=wss://your-hub-server/api/v1/fleet/agent-ws
 BCK_AGENT_AGENT_TOKEN=paste-token-here
 BCK_AGENT_BCK_MANAGER_PATH=/opt/bck_manager
 BCK_AGENT_CONFIG_PATH=/opt/bck_manager/config.yaml
+BCK_AGENT_LOG_LEVEL=INFO
+BCK_AGENT_LOG_FILE=/var/log/bck_manager_agent/agent.log
 EOF
     chmod 600 "$ENV_FILE"
     log ".env created — edit it with your Hub URL and token"
