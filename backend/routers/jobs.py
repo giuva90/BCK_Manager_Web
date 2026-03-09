@@ -1,5 +1,6 @@
 """Backup job CRUD — reads/writes config.yaml."""
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,6 +18,8 @@ from backend.services.config_manager import (
     read_config_masked,
 )
 from backend.services.bck_bridge import mask_secrets
+
+logger = logging.getLogger("bck_web.jobs")
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -77,6 +80,7 @@ async def create_job(
         if key in job_dict and hasattr(job_dict[key], "items"):
             pass  # already a dict from model_dump
     add_job(job_dict)
+    logger.info("Job created: name=%s", body.name)
     return _job_to_read(mask_secrets(job_dict))
 
 
@@ -90,6 +94,7 @@ async def update_job_route(
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{name}' not found")
     updates = body.model_dump(exclude_none=True)
     update_job(name, updates)
+    logger.info("Job updated: name=%s", name)
     updated = get_job_by_name(name)
     return _job_to_read(mask_secrets(updated))
 
@@ -101,6 +106,7 @@ async def delete_job_route(
 ):
     try:
         delete_job(name)
+        logger.info("Job deleted: name=%s", name)
     except ValueError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{name}' not found")
 
@@ -112,6 +118,7 @@ async def toggle_job_route(
 ):
     try:
         new_state = toggle_job(name)
+        logger.info("Job toggled: name=%s enabled=%s", name, new_state)
     except ValueError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{name}' not found")
     return {"name": name, "enabled": new_state}

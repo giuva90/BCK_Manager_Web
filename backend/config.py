@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Database
     db_path: str = Field("/opt/bck_manager_web/bck_web.db", alias="BCK_WEB_DB_PATH")
 
+    # Logging
+    log_level: str = Field("INFO", alias="BCK_WEB_LOG_LEVEL")
+    log_file: str = Field("/var/log/bck_manager_web/web.log", alias="BCK_WEB_LOG_FILE")
+
     # Update checker
     github_repo: str = Field("giuva90/BCK_Manager_Web", alias="BCK_WEB_GITHUB_REPO")
     update_check_interval_hours: int = Field(6, alias="BCK_WEB_UPDATE_CHECK_INTERVAL_HOURS")

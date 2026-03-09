@@ -1,6 +1,7 @@
 """Job execution routes — run backups, check status."""
 
 import asyncio
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -17,6 +18,8 @@ from backend.services.bck_bridge import (
 )
 from backend.services.config_manager import get_jobs
 
+logger = logging.getLogger("bck_web.run")
+
 router = APIRouter(prefix="/run", tags=["run"])
 
 
@@ -27,12 +30,14 @@ async def run_all(
 ):
     """Launch all enabled backup jobs in the background."""
     server_id = body.server_id or 0
+    logger.info("Run all jobs requested by user=%s server_id=%s", user.username, server_id)
 
     async def _run():
         try:
             await bridge_run_all(triggered_by=user.username, server_id=server_id)
-        except Exception:
-            pass  # errors are captured in job states
+            logger.info("Run all jobs completed: server_id=%s", server_id)
+        except Exception as exc:
+            logger.error("Run all jobs failed: %s", exc, exc_info=True)
 
     asyncio.create_task(_run())
     return {"message": "All backup jobs started", "server_id": server_id}
@@ -56,11 +61,14 @@ async def run_job(
     if current.status == JobStatus.RUNNING:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Job '{name}' is already running")
 
+    logger.info("Run job requested: name=%s user=%s server_id=%s", name, user.username, server_id)
+
     async def _run():
         try:
             await bridge_run_job(name, triggered_by=user.username, server_id=server_id)
-        except Exception:
-            pass  # error captured in job state
+            logger.info("Job completed: name=%s server_id=%s", name, server_id)
+        except Exception as exc:
+            logger.error("Job failed: name=%s error=%s", name, exc, exc_info=True)
 
     asyncio.create_task(_run())
     return {"message": f"Job '{name}' started", "server_id": server_id}

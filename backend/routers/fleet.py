@@ -1,6 +1,7 @@
 """Fleet management routes — server CRUD, agent WebSocket, token generation."""
 
 import json
+import logging
 import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -17,6 +18,8 @@ from backend.auth.jwt import decode_token
 from backend.schemas.server import ServerCreate, ServerUpdate, ServerRead, AgentMessage, AgentTokenResponse
 from backend.services.agent_hub import agent_hub
 from backend.services.ssh_client import test_ssh_connection
+
+logger = logging.getLogger("bck_web.fleet")
 
 router = APIRouter(prefix="/fleet", tags=["fleet"])
 
@@ -77,6 +80,7 @@ async def register_server(
     session.add(server)
     session.commit()
     session.refresh(server)
+    logger.info("Server registered: name=%s type=%s", server.name, server.connection_type)
     return _to_read(server)
 
 
@@ -183,6 +187,7 @@ async def agent_websocket(
     # Authenticate via Bearer token in header
     auth_header = websocket.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
+        logger.warning("Agent WebSocket rejected: missing token")
         await websocket.close(code=4001, reason="Missing agent token")
         return
 
@@ -197,10 +202,12 @@ async def agent_websocket(
             break
 
     if server is None:
+        logger.warning("Agent WebSocket rejected: invalid token")
         await websocket.close(code=4003, reason="Invalid agent token")
         return
 
     await websocket.accept()
+    logger.info("Agent connected: server_id=%s name=%s", server.id, server.name)
     agent_session = await agent_hub.register(server.id, websocket)
 
     # Update server status
@@ -228,9 +235,9 @@ async def agent_websocket(
                 agent_session.resolve(msg.id, msg)
 
     except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
+        logger.info("Agent disconnected: server_id=%s", server.id)
+    except Exception as exc:
+        logger.error("Agent WebSocket error: server_id=%s error=%s", server.id, exc, exc_info=True)
     finally:
         await agent_hub.unregister(server.id)
         server.is_online = False

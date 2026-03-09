@@ -1,5 +1,6 @@
 """Auth routes — login, logout, refresh, me."""
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
@@ -13,6 +14,8 @@ from backend.auth.dependencies import get_current_user
 from backend.schemas.user import LoginRequest, UserRead
 
 import json
+
+logger = logging.getLogger("bck_web.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,8 +37,10 @@ async def login(
         select(User).where(User.username == body.username)
     ).first()
     if user is None or not verify_password(body.password, user.hashed_password):
+        logger.warning("Login failed for username=%s", body.username)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
     if not user.is_active:
+        logger.warning("Login attempt for disabled account: username=%s", body.username)
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account disabled")
 
     access, a_jti, a_exp = create_access_token(user.username, user.role)
@@ -44,6 +49,8 @@ async def login(
     user.last_login = datetime.now(timezone.utc)
     session.add(user)
     session.commit()
+
+    logger.info("User logged in: username=%s role=%s", user.username, user.role)
 
     response.set_cookie("access_token", access, max_age=int((a_exp - datetime.now(timezone.utc)).total_seconds()), **_COOKIE_OPTS)
     response.set_cookie("refresh_token", refresh, max_age=int((r_exp - datetime.now(timezone.utc)).total_seconds()), **_COOKIE_OPTS)
@@ -90,6 +97,7 @@ async def logout(
             ))
     session.commit()
 
+    logger.info("User logged out (access cookie cleared)")
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     return {"message": "Logged out"}

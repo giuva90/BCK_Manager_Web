@@ -1,16 +1,20 @@
 """Tail log file and broadcast new lines via WebSocket."""
 
 import asyncio
+import logging
 import os
 from typing import AsyncIterator
 
 from backend.config import settings
+
+logger = logging.getLogger("bck_web.log_watcher")
 
 
 async def tail_log(lines: int = 100) -> list[str]:
     """Return the last *lines* lines from the BCK Manager log file."""
     log_path = settings.bck_log_path
     if not os.path.isfile(log_path):
+        logger.debug("Log file not found: %s", log_path)
         return []
 
     def _read_tail():

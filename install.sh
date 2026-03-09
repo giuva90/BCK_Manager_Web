@@ -107,6 +107,8 @@ BCK_MANAGER_PATH=/opt/bck_manager
 BCK_CONFIG_PATH=/opt/bck_manager/config.yaml
 BCK_LOG_PATH=/var/log/bck_manager.log
 BCK_WEB_DB_PATH=$APP_DIR/data/bck_manager_web.db
+BCK_WEB_LOG_LEVEL=INFO
+BCK_WEB_LOG_FILE=/var/log/bck_manager_web/web.log
 EOF
     chmod 600 "$ENV_FILE"
     log ".env created with random secret key"
@@ -116,6 +118,10 @@ fi
 
 # ── Data directory ───────────────────────────────────────────────
 mkdir -p "$APP_DIR/data"
+
+# ── Log directory ────────────────────────────────────────────────
+mkdir -p /var/log/bck_manager_web
+chown "$SERVICE_USER":"$SERVICE_USER" /var/log/bck_manager_web
 
 # ── Ownership ────────────────────────────────────────────────────
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$APP_DIR"

@@ -8,7 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
+from backend.logging_config import setup_logging
 from backend.database import init_db
+
+# Initialise logging as early as possible so every module inherits it.
+setup_logging(settings.log_level, settings.log_file)
 
 logger = logging.getLogger("bck_web")
 
@@ -18,7 +22,10 @@ async def lifespan(app: FastAPI):
     """Startup / shutdown logic."""
     # --- Startup ---
     init_db()
-    logger.info(f"BCK Manager Web v{settings.app_version} starting (mode={settings.mode})")
+    logger.info(
+        "BCK Manager Web v%s starting (mode=%s, log_level=%s, log_file=%s)",
+        settings.app_version, settings.mode, settings.log_level, settings.log_file,
+    )
 
     # Check if first-run (no users)
     from sqlmodel import Session, select, func

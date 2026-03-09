@@ -1,5 +1,6 @@
 """Read/write BCK Manager's config.yaml with atomic writes and validation."""
 
+import logging
 import os
 import tempfile
 from typing import Any
@@ -8,6 +9,8 @@ import yaml
 
 from backend.config import settings
 from backend.services.bck_bridge import mask_secrets, run_in_thread, _bck_ready
+
+logger = logging.getLogger("bck_web.config_manager")
 
 # Sensitive fields — if the incoming value equals the mask, keep the old value
 _MASK = "\u2022" * 8
@@ -27,6 +30,7 @@ def write_config(config: dict, path: str | None = None) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
     os.replace(tmp, path)
+    logger.debug("Config written atomically: %s", path)
 
 
 def _merge_sensitive_fields(new: Any, old: Any) -> Any:

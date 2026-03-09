@@ -10,5 +10,7 @@ class AgentConfig(BaseSettings):
     config_path: str = "/opt/bck_manager/config.yaml"
     reconnect_delay: int = 5
     heartbeat_interval: int = 30
+    log_level: str = "INFO"
+    log_file: str = "/var/log/bck_manager_agent/agent.log"
 
     model_config = {"env_prefix": "BCK_AGENT_"}

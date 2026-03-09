@@ -1,7 +1,11 @@
 """SQLite database engine and session factory via SQLModel."""
 
+import logging
+
 from sqlmodel import SQLModel, Session, create_engine
 from backend.config import settings
+
+logger = logging.getLogger("bck_web.database")
 
 DATABASE_URL = f"sqlite:///{settings.db_path}"
 
@@ -14,7 +18,9 @@ engine = create_engine(
 
 def init_db() -> None:
     """Create all tables.  Safe to call multiple times."""
+    logger.info("Initialising database: %s", settings.db_path)
     SQLModel.metadata.create_all(engine)
+    logger.debug("Database tables created/verified")
 
 
 def get_session():

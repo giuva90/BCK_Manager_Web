@@ -4,9 +4,13 @@ Only entries tagged with the ``bck-manager-web:`` comment prefix are
 touched.  Other crontab entries are never modified.
 """
 
+import logging
+
 from crontab import CronTab
 
 from backend.models.cron_job import CronJob
+
+logger = logging.getLogger("bck_web.cron")
 
 COMMENT_PREFIX = "bck-manager-web:"
 BCK_CMD = "/usr/local/bin/bck-manager"
@@ -36,6 +40,7 @@ def sync_to_crontab(cron_jobs: list[CronJob]) -> None:
         )
         entry.setall(job.cron_expression)
     cron.write()
+    logger.info("Crontab synced: %d jobs written", sum(1 for j in cron_jobs if j.enabled))
 
 
 def get_next_runs(cron_expression: str, count: int = 5) -> list[str]:
