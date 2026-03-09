@@ -55,7 +55,7 @@ sudo bash install.sh
 sudo systemctl start bck-manager-web
 ```
 
-6. Open `http://<server>:8080` and create the first admin account.
+6. Open `http://<server>:8080` — on the first visit the app automatically redirects to the setup wizard at `/setup` where you create the initial admin account.
 
 ### Hub + Agents
 

@@ -68,7 +68,26 @@ BCK_WEB_LOG_FILE=/var/log/bck_manager_web/web.log
 sudo systemctl enable --now bck-manager-web
 ```
 
-7. Open the UI and create the first admin account.
+7. Open the UI in a browser and complete the first-run setup wizard.
+
+### First-run setup wizard
+
+On the first visit after a clean installation, BCK Manager Web detects that no admin account exists and automatically redirects the browser to the setup wizard at `/setup`.  If you navigate directly to the host URL (e.g. `http://<server>:8080`) the app will redirect you there automatically.
+
+The wizard asks for:
+
+- **Username** — the initial admin account name (minimum 3 characters)
+- **Email** — used for account identification
+- **Password** — minimum 8 characters
+
+After submitting, the admin account is created and you are logged in immediately.  The setup wizard returns HTTP 410 Gone on any subsequent call once an account exists, preventing accidental re-setup.
+
+> **Tip:** if you receive `{"detail":"Not Found"}` when navigating to the setup wizard, the most common cause is that the frontend static files were not built or are not reachable. Verify that `frontend/dist/` exists inside `$APP_DIR` and that the service started without errors:
+>
+> ```bash
+> sudo journalctl -u bck-manager-web -n 50
+> tail -f /var/log/bck_manager_web/web.log
+> ```
 
 ## Hub Installation
 
@@ -260,6 +279,47 @@ Recommended upgrade flow:
 ### Enable debug logging
 
 Set `BCK_WEB_LOG_LEVEL=DEBUG` (or `BCK_AGENT_LOG_LEVEL=DEBUG` for the agent) in the corresponding `.env` file and restart the service.  Debug mode logs every command, SQL query detail, SSH session, and WebSocket message.
+
+```bash
+# Enable debug logging for the web interface
+sudo sed -i 's/^BCK_WEB_LOG_LEVEL=.*/BCK_WEB_LOG_LEVEL=DEBUG/' /opt/bck_manager_web/.env
+sudo systemctl restart bck-manager-web
+
+# Watch the log in real time
+tail -f /var/log/bck_manager_web/web.log
+sudo journalctl -u bck-manager-web -f
+```
+
+To revert, set the value back to `INFO` (or `WARNING` for even quieter operation):
+
+```bash
+sudo sed -i 's/^BCK_WEB_LOG_LEVEL=.*/BCK_WEB_LOG_LEVEL=INFO/' /opt/bck_manager_web/.env
+sudo systemctl restart bck-manager-web
+```
+
+### Setup wizard shows `{"detail":"Not Found"}`
+
+This means the browser is reaching the FastAPI backend but the frontend static files are not being served.  Common causes:
+
+1. **Frontend was not built** — the installer must have been interrupted before the `npm run build` step.  Re-run `sudo bash install.sh` from the repository root.
+2. **Wrong working directory** — `install.sh` must be executed from the repository root where `frontend/` is a subdirectory.
+3. **Permissions** — the service user (`bckweb`) must be able to read `$APP_DIR/frontend/dist/`.
+
+Verify the dist exists:
+
+```bash
+ls /opt/bck_manager_web/frontend/dist/index.html
+```
+
+If missing, rebuild manually:
+
+```bash
+cd /path/to/BCK_Manager_Web
+npm ci --prefix frontend && npm run build --prefix frontend
+sudo cp -r frontend/dist /opt/bck_manager_web/frontend/
+sudo chown -R bckweb:bckweb /opt/bck_manager_web/frontend/
+sudo systemctl restart bck-manager-web
+```
 
 ### Installer fails on Node version
 

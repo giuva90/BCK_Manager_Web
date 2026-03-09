@@ -27,11 +27,11 @@ export function SetupPage() {
     }
     setLoading(true);
     try {
-      const user = await api.post<{ id: number; username: string; email: string; role: 'admin' | 'operator' | 'viewer'; is_active: boolean; allowed_system_users: string[] }>(
+      const resp = await api.post<{ message: string; user: { id: number; username: string; email: string; role: 'admin' | 'operator' | 'viewer'; is_active: boolean; allowed_system_users: string[] } }>(
         '/setup',
         { username: form.username, email: form.email, password: form.password },
       );
-      setUser(user);
+      setUser(resp.user);
       setNeedsSetup(false);
       toast.success('Admin account created');
       navigate('/dashboard', { replace: true });
