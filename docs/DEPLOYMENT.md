@@ -72,7 +72,7 @@ sudo systemctl enable --now bck-manager-web
 
 ### First-run setup wizard
 
-On the first visit after a clean installation, BCK Manager Web detects that no admin account exists and automatically redirects the browser to the setup wizard at `/setup`.  If you navigate directly to the host URL (e.g. `http://<server>:8080`) the app will redirect you there automatically.
+On the first visit after a clean installation, BCK Manager Web detects that no users exist in the database and automatically redirects the browser to the setup wizard at `/setup`.  If you navigate directly to the host URL (e.g. `http://<server>:8080`) the app will redirect you there automatically.
 
 The wizard asks for:
 
@@ -80,7 +80,7 @@ The wizard asks for:
 - **Email** — used for account identification
 - **Password** — minimum 8 characters
 
-After submitting, the admin account is created and you are logged in immediately.  The setup wizard returns HTTP 410 Gone on any subsequent call once an account exists, preventing accidental re-setup.
+After submitting, the admin account is created and you are logged in immediately.  The status endpoint (`GET /api/v1/setup`) will return `{"needs_setup": false}` once any user exists.  If you attempt to submit the creation form again (`POST /api/v1/setup`), the server returns HTTP 410 Gone, preventing accidental re-setup.
 
 > **Tip:** if you receive `{"detail":"Not Found"}` when navigating to the setup wizard, the most common cause is that the frontend static files were not built or are not reachable. Verify that `frontend/dist/` exists inside `$APP_DIR` and that the service started without errors:
 >
