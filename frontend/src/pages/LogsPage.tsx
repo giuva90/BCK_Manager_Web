@@ -10,7 +10,7 @@ export function LogsPage() {
   const [autoScroll, setAutoScroll] = useState(true);
 
   // Initial tail
-  const { data: initialLogs } = useQuery<string>({
+  const { data: initialLogs } = useQuery<{ lines: string[]; count: number }>({
     queryKey: ['logs-tail-full'],
     queryFn: () => api.get('/logs/tail?lines=200'),
     staleTime: Infinity,
@@ -18,7 +18,7 @@ export function LogsPage() {
 
   useEffect(() => {
     if (initialLogs) {
-      setLines(initialLogs.split('\n'));
+      setLines(initialLogs.lines);
     }
   }, [initialLogs]);
 

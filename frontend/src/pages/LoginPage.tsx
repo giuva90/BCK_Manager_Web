@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FolderArchive } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -14,6 +14,13 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+
+  // If no admin user exists yet, go straight to the setup wizard.
+  useEffect(() => {
+    api.get<{ needs_setup: boolean }>('/setup').then((s) => {
+      if (s.needs_setup) navigate('/setup', { replace: true });
+    }).catch(() => { /* backend unavailable — stay on login */ });
+  }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -14,9 +14,11 @@ interface JobStatus {
 
 interface SystemStatus {
   version: string;
+  mode: string;
   uptime_seconds: number;
-  total_jobs: number;
-  enabled_jobs: number;
+  hostname: string;
+  python_version: string;
+  bck_manager_path: string;
 }
 
 export function DashboardPage() {
@@ -31,7 +33,7 @@ export function DashboardPage() {
     refetchInterval: 5000,
   });
 
-  const { data: logs } = useQuery<string>({
+  const { data: logs } = useQuery<{ lines: string[]; count: number }>({
     queryKey: ['logs-tail'],
     queryFn: () => api.get('/logs/tail?lines=15'),
     refetchInterval: 10000,
@@ -50,6 +52,8 @@ export function DashboardPage() {
   });
 
   const runningJobs = jobs.filter((j) => j.status === 'running');
+  const totalJobs = jobs.length;
+  const enabledJobs = jobs.filter((j) => j.enabled).length;
 
   return (
     <div className="space-y-6">
@@ -67,8 +71,8 @@ export function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={FolderArchive} label="Total Jobs" value={status?.total_jobs ?? '—'} />
-        <StatCard icon={CheckCircle2} label="Enabled" value={status?.enabled_jobs ?? '—'} color="text-green-400" />
+        <StatCard icon={FolderArchive} label="Total Jobs" value={totalJobs} />
+        <StatCard icon={CheckCircle2} label="Enabled" value={enabledJobs} color="text-green-400" />
         <StatCard icon={Clock} label="Running" value={runningJobs.length} color="text-blue-400" />
         <StatCard icon={HardDrive} label="Version" value={status?.version ?? '—'} />
       </div>
@@ -115,7 +119,7 @@ export function DashboardPage() {
       <div>
         <h2 className="text-lg font-semibold mb-3">Recent Logs</h2>
         <pre className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs font-mono text-slate-300 overflow-auto max-h-64 whitespace-pre-wrap">
-          {logs || 'No log data available.'}
+          {logs?.lines.join('\n') || 'No log data available.'}
         </pre>
       </div>
     </div>

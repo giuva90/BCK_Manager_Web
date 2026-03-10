@@ -32,10 +32,12 @@ interface SystemConfig {
 }
 
 interface UpdateInfo {
-  update_available: boolean;
-  current_version: string;
-  latest_version: string;
-  release_url: string;
+  available: boolean;
+  current: string;
+  latest?: string;
+  release_url?: string;
+  release_notes?: string;
+  published_at?: string;
 }
 
 export function SettingsPage() {
@@ -88,12 +90,12 @@ export function SettingsPage() {
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {/* Update Banner */}
-      {updateInfo?.update_available && (
+      {updateInfo?.available && (
         <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4 flex items-center justify-between">
           <div>
             <p className="font-medium text-cyan-400">Update Available</p>
             <p className="text-sm text-slate-400">
-              v{updateInfo.current_version} → v{updateInfo.latest_version}
+              v{updateInfo.current} → v{updateInfo.latest}
             </p>
           </div>
           <a

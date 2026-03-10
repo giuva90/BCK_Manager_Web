@@ -7,13 +7,14 @@ import { useState } from 'react';
 
 interface Job {
   name: string;
-  type: string;
+  mode: string;
   enabled: boolean;
-  s3_endpoint_url: string;
-  s3_bucket: string;
+  s3_endpoint: string;
+  bucket: string;
   prefix: string;
-  sources: string[];
-  retention?: { daily?: number; weekly?: number; monthly?: number };
+  source_path?: string;
+  volume_name?: string;
+  retention?: { mode?: string; days?: number; daily_keep?: number; monthly_keep?: number };
 }
 
 export function JobsPage() {
@@ -78,7 +79,7 @@ export function JobsPage() {
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0">
                   <h3 className="font-semibold truncate">{job.name}</h3>
-                  <span className="text-xs text-slate-400 uppercase">{job.type}</span>
+                  <span className="text-xs text-slate-400 uppercase">{job.mode}</span>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleJob.mutate(job.name); }}
@@ -94,9 +95,9 @@ export function JobsPage() {
               </div>
 
               <div className="space-y-1 text-sm text-slate-400">
-                <p className="truncate">Bucket: {job.s3_bucket}</p>
+                <p className="truncate">Bucket: {job.bucket}</p>
                 <p className="truncate">Prefix: {job.prefix || '/'}</p>
-                <p>Sources: {job.sources?.length ?? 0}</p>
+                <p>Source: {job.source_path || job.volume_name || '—'}</p>
               </div>
 
               <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">

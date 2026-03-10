@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 interface Job {
   name: string;
-  type: string;
+  mode: string;
   enabled: boolean;
 }
 
@@ -52,7 +52,7 @@ export function RestorePage() {
   });
 
   const selectedJobData = jobs.find((j) => j.name === selectedJob);
-  const isVolume = selectedJobData?.type === 'docker_volume';
+  const isVolume = selectedJobData?.mode === 'volume';
 
   function handleRestore() {
     if (!selectedBackup) {
@@ -88,7 +88,7 @@ export function RestorePage() {
           <option value="">Choose a job…</option>
           {jobs.map((j) => (
             <option key={j.name} value={j.name}>
-              {j.name} ({j.type})
+              {j.name} ({j.mode})
             </option>
           ))}
         </select>

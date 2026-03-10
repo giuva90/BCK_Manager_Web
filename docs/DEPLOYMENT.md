@@ -274,6 +274,117 @@ Recommended upgrade flow:
 3. Restore `.env` and the SQLite DB if schema changes were involved.
 4. Restart services.
 
+## Local Development on Windows
+
+This section covers running the full stack locally on a Windows machine for UI development and testing.  No systemd or Caddy is required — Uvicorn and the Vite dev server are sufficient.
+
+### Prerequisites
+
+- Python 3.10+ (in PATH)
+- Node.js 20+
+- An installed copy of BCK Manager for Windows.  Run the PowerShell installer from the `BCK_Manager/` folder (elevated prompt):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File BCK_Manager\install.ps1
+```
+
+This places BCK Manager files under `C:\ProgramData\bck_manager` and creates `config.yaml` from the example template.  Edit `C:\ProgramData\bck_manager\config.yaml` with real or stub S3 credentials before starting the backend.
+
+### 1 — Create a `.env` file
+
+Copy the example template and adjust all Linux paths to Windows equivalents:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Minimal set of values to change — edit `.env` with any text editor:
+
+```env
+BCK_WEB_MODE=standalone
+BCK_WEB_HOST=127.0.0.1
+BCK_WEB_PORT=8080
+
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(48))"
+BCK_WEB_SECRET_KEY=CHANGE_ME_STRONG_RANDOM_STRING_MIN_32_CHARS
+
+BCK_MANAGER_PATH=C:/ProgramData/bck_manager
+BCK_CONFIG_PATH=C:/ProgramData/bck_manager/config.yaml
+BCK_LOG_PATH=C:/ProgramData/bck_manager/bck_manager.log
+
+BCK_WEB_DB_PATH=C:/ProgramData/bck_manager_web/bck_web.db
+BCK_WEB_LOG_LEVEL=DEBUG
+BCK_WEB_LOG_FILE=C:/ProgramData/bck_manager_web/web.log
+```
+
+> **Note:** use forward slashes (`/`) or escaped backslashes (`\\`) in `.env` values — Python's `os.makedirs` handles both on Windows.
+
+Generate the secret key and paste it in:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+### 2 — Start the backend
+
+Open a terminal in the repository root.
+
+```powershell
+# Create and activate a virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+# Install backend dependencies
+pip install -r backend\requirements.txt
+
+# Run Uvicorn
+uvicorn backend.main:app --host 127.0.0.1 --port 8080 --reload
+```
+
+The API is now live at `http://localhost:8080/api/v1`.  Interactive docs are at `http://localhost:8080/api/docs`.
+
+> If `python-crontab` raises an import error on Windows, it can be skipped for UI testing — the cron router will simply return errors when called.
+
+### 3 — Start the frontend dev server
+
+Open a second terminal in the repository root.
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev server starts at `http://localhost:5173`.  All `/api` requests are proxied to `http://localhost:8080` automatically (configured in `vite.config.ts`), so no CORS changes are needed.
+
+### 4 — First-run setup wizard
+
+Open `http://localhost:5173` in a browser.  The app detects that no users exist and redirects to `/setup`.  Create the initial admin account there.
+
+### 5 — Working with a stub config
+
+If you do not have a real S3 endpoint available, the web UI will still function for authentication, job CRUD, and most navigation.  Operations that actually execute a backup or browse storage will return errors, which is acceptable for frontend testing.  Add at least one dummy job to `config.yaml`:
+
+```yaml
+backup_jobs:
+  - name: "test-job"
+    source_path: "C:/Temp"
+    bucket: "test-bucket"
+    s3_endpoint: "my-endpoint"
+    prefix: "local-test"
+    mode: "folder"
+    enabled: true
+```
+
+### Stopping the stack
+
+```powershell
+# Stop Vite: Ctrl+C in its terminal
+# Stop Uvicorn: Ctrl+C in its terminal
+# Deactivate venv:
+deactivate
+```
+
 ## Troubleshooting
 
 ### Enable debug logging

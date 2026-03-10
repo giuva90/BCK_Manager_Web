@@ -1,13 +1,17 @@
-"""Password hashing utilities — bcrypt via passlib."""
+"""Password hashing utilities — bcrypt (direct, passlib-free).
 
-from passlib.context import CryptContext
+passlib's bcrypt backend is incompatible with bcrypt>=4.0.0 because the
+newer library rejects passwords longer than 72 bytes, which passlib uses
+internally during its wrap-bug detection routine.  Using bcrypt directly
+avoids the issue entirely.
+"""
 
-_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def hash_password(plain: str) -> str:
-    return _ctx.hash(plain)
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _ctx.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
