@@ -11,7 +11,7 @@ interface ServerInfo {
   id: number;
   name: string;
   hostname: string;
-  connection_type: 'agent' | 'ssh';
+  connection_type: 'agent' | 'ssh' | 'local';
   is_online: boolean;
   ssh_user?: string;
   ssh_port?: number;
@@ -124,6 +124,9 @@ export function FleetPage() {
                 {server.connection_type === 'ssh' && (
                   <span>{server.ssh_user}@{server.hostname}:{server.ssh_port || 22}</span>
                 )}
+                {server.connection_type === 'local' && (
+                  <span>This hub server</span>
+                )}
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-slate-800">
@@ -158,7 +161,7 @@ function ServerCreateModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     name: '',
     hostname: '',
-    connection_type: 'ssh' as 'agent' | 'ssh',
+    connection_type: 'ssh' as 'agent' | 'ssh' | 'local',
     ssh_user: 'root',
     ssh_port: 22,
     ssh_key_path: '',
@@ -212,11 +215,19 @@ function ServerCreateModal({ onClose }: { onClose: () => void }) {
             <label className="block text-sm font-medium text-slate-300 mb-1">Connection Type</label>
             <select
               value={form.connection_type}
-              onChange={(e) => setForm((p) => ({ ...p, connection_type: e.target.value as 'agent' | 'ssh' }))}
+              onChange={(e) => {
+                const ct = e.target.value as 'agent' | 'ssh' | 'local';
+                setForm((p) => ({
+                  ...p,
+                  connection_type: ct,
+                  hostname: ct === 'local' ? 'localhost' : p.hostname === 'localhost' ? '' : p.hostname,
+                }));
+              }}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             >
               <option value="ssh">SSH</option>
               <option value="agent">Agent</option>
+              <option value="local">Local (this hub)</option>
             </select>
           </div>
           {form.connection_type === 'ssh' && (

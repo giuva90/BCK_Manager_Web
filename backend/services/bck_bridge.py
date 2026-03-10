@@ -25,7 +25,7 @@ if settings.bck_manager_path not in sys.path:
 # Lazy imports — will fail gracefully if BCK Manager is not installed
 _bck_ready = False
 try:
-    from config_loader import load_config, get_enabled_jobs, get_endpoint_config  # type: ignore
+    from config_loader import load_config, get_enabled_jobs, get_endpoint_config, ConfigError  # type: ignore
     from backup import run_backup_job, run_all_jobs  # type: ignore
     from restore import (  # type: ignore
         list_remote_backups,
@@ -60,7 +60,15 @@ _executor = ThreadPoolExecutor(max_workers=4)
 
 async def run_in_thread(fn, *args):
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(_executor, fn, *args)
+    try:
+        return await loop.run_in_executor(_executor, fn, *args)
+    except SystemExit as exc:
+        # config_loader.py in older BCK Manager installations calls sys.exit(1)
+        # on validation errors; convert to a plain exception so FastAPI can
+        # return a proper HTTP error instead of crashing the ASGI app.
+        raise RuntimeError(
+            f"BCK Manager exited with code {exc.code} — check config.yaml for errors"
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -244,8 +252,11 @@ async def bridge_apply_retention(job_name: str, dry_run: bool = False) -> dict:
 
 
 async def bridge_test_s3(endpoint_name: str) -> bool:
-    config = await bridge_load_config()
-    ep = get_endpoint_config(config, endpoint_name)
+    # Use our raw YAML reader instead of BCK Manager's load_config() so that
+    # broken job→endpoint references in other jobs don't prevent testing.
+    from backend.services.config_manager import read_config  # local to avoid circular import
+    config = read_config()
+    ep = next((e for e in config.get("s3_endpoints", []) if e.get("name") == endpoint_name), None)
     if ep is None:
         raise ValueError(f"Endpoint '{endpoint_name}' not found")
     bck_logger = _get_logger()
@@ -256,7 +267,8 @@ async def bridge_test_s3(endpoint_name: str) -> bool:
 
 
 async def bridge_list_buckets(endpoint_name: str) -> list[dict]:
-    config = await bridge_load_config()
+    from backend.services.config_manager import read_config  # local to avoid circular import
+    config = read_config()
     bck_logger = _get_logger()
     return await run_in_thread(list_buckets_for_endpoint, endpoint_name, config, bck_logger)
 

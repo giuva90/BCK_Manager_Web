@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # Update checker
     github_repo: str = Field("giuva90/BCK_Manager_Web", alias="BCK_WEB_GITHUB_REPO")
+    update_check_enabled: bool = Field(True, alias="BCK_WEB_UPDATE_CHECK_ENABLED")
     update_check_interval_hours: int = Field(6, alias="BCK_WEB_UPDATE_CHECK_INTERVAL_HOURS")
 
     # App metadata

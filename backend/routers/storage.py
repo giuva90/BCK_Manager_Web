@@ -29,6 +29,8 @@ async def list_buckets(
         buckets = await bridge_list_buckets(endpoint)
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     return buckets
 
 
@@ -104,4 +106,6 @@ async def test_connection(
         ok = await bridge_test_s3(body.endpoint_name)
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     return {"endpoint": body.endpoint_name, "success": ok}

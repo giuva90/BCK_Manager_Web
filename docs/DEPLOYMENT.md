@@ -96,6 +96,7 @@ After submitting, the admin account is created and you are logged in immediately
 3. Publish the hub behind TLS.
 4. Confirm that the hub can serve WebSocket endpoints through the reverse proxy.
 5. Add remote servers from the Fleet section in the UI.
+6. Optionally register the hub itself as a "local" fleet node to manage its own backups through the Fleet UI.
 
 Recommended hub checks:
 

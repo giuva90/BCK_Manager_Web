@@ -134,3 +134,91 @@ def toggle_job(name: str, path: str | None = None) -> bool:
             write_config(config, path)
             return j["enabled"]
     raise ValueError(f"Job '{name}' not found")
+
+
+# ---------------------------------------------------------------------------
+# S3 endpoint helpers
+# ---------------------------------------------------------------------------
+
+def get_endpoints(path: str | None = None) -> list[dict]:
+    return read_config(path).get("s3_endpoints", [])
+
+
+def get_endpoint_by_name(name: str, path: str | None = None) -> dict | None:
+    for ep in get_endpoints(path):
+        if ep.get("name") == name:
+            return ep
+    return None
+
+
+def add_endpoint(ep: dict, path: str | None = None) -> None:
+    config = read_config(path)
+    config.setdefault("s3_endpoints", []).append(ep)
+    write_config(config, path)
+
+
+def update_endpoint(name: str, updates: dict, path: str | None = None) -> None:
+    config = read_config(path)
+    endpoints = config.get("s3_endpoints", [])
+    for i, ep in enumerate(endpoints):
+        if ep.get("name") == name:
+            updates = _merge_sensitive_fields(updates, ep)
+            endpoints[i] = {**ep, **updates}
+            break
+    else:
+        raise ValueError(f"Endpoint '{name}' not found")
+    config["s3_endpoints"] = endpoints
+    write_config(config, path)
+
+
+def delete_endpoint(name: str, path: str | None = None) -> None:
+    config = read_config(path)
+    endpoints = config.get("s3_endpoints", [])
+    config["s3_endpoints"] = [ep for ep in endpoints if ep.get("name") != name]
+    if len(config["s3_endpoints"]) == len(endpoints):
+        raise ValueError(f"Endpoint '{name}' not found")
+    write_config(config, path)
+
+
+# ---------------------------------------------------------------------------
+# Encryption key helpers
+# ---------------------------------------------------------------------------
+
+def get_encryption_keys(path: str | None = None) -> list[dict]:
+    return read_config(path).get("encryption_keys", [])
+
+
+def get_encryption_key_by_name(name: str, path: str | None = None) -> dict | None:
+    for k in get_encryption_keys(path):
+        if k.get("name") == name:
+            return k
+    return None
+
+
+def add_encryption_key(key: dict, path: str | None = None) -> None:
+    config = read_config(path)
+    config.setdefault("encryption_keys", []).append(key)
+    write_config(config, path)
+
+
+def update_encryption_key(name: str, updates: dict, path: str | None = None) -> None:
+    config = read_config(path)
+    keys = config.get("encryption_keys", [])
+    for i, k in enumerate(keys):
+        if k.get("name") == name:
+            updates = _merge_sensitive_fields(updates, k)
+            keys[i] = {**k, **updates}
+            break
+    else:
+        raise ValueError(f"Encryption key '{name}' not found")
+    config["encryption_keys"] = keys
+    write_config(config, path)
+
+
+def delete_encryption_key(name: str, path: str | None = None) -> None:
+    config = read_config(path)
+    keys = config.get("encryption_keys", [])
+    config["encryption_keys"] = [k for k in keys if k.get("name") != name]
+    if len(config["encryption_keys"]) == len(keys):
+        raise ValueError(f"Encryption key '{name}' not found")
+    write_config(config, path)

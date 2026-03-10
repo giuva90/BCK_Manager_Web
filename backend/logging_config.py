@@ -60,3 +60,10 @@ def setup_logging(level: str, log_file: str) -> None:
         file_handler.setLevel(numeric_level)
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
+
+    # Route Uvicorn loggers through the same handlers so access logs
+    # and error logs are also written to the file.
+    for uv_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+        uv_logger = logging.getLogger(uv_name)
+        uv_logger.handlers.clear()
+        uv_logger.propagate = True

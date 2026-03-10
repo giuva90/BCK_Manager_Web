@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 class ServerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=64)
     hostname: str
-    connection_type: Literal["agent", "ssh"]
+    connection_type: Literal["agent", "ssh", "local"]
     # SSH-specific
     ssh_host: Optional[str] = None
     ssh_port: int = 22

@@ -35,7 +35,11 @@ def _to_read(s: Server) -> ServerRead:
         ssh_host=s.ssh_host,
         ssh_port=s.ssh_port,
         ssh_user=s.ssh_user,
-        is_online=agent_hub.is_online(s.id) if s.connection_type == "agent" else s.is_online,
+        is_online=(
+            True if s.connection_type == "local"
+            else agent_hub.is_online(s.id) if s.connection_type == "agent"
+            else s.is_online
+        ),
         bck_manager_version=s.bck_manager_version,
         bck_manager_path=s.bck_manager_path,
         config_path=s.config_path,
@@ -144,7 +148,12 @@ async def server_status(
     server = session.get(Server, server_id)
     if server is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Server not found")
-    online = agent_hub.is_online(server_id) if server.connection_type == "agent" else server.is_online
+    if server.connection_type == "local":
+        online = True
+    elif server.connection_type == "agent":
+        online = agent_hub.is_online(server_id)
+    else:
+        online = server.is_online
     return {"server_id": server_id, "online": online, "last_seen": server.last_seen}
 
 
@@ -158,7 +167,9 @@ async def test_server(
     if server is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Server not found")
 
-    if server.connection_type == "agent":
+    if server.connection_type == "local":
+        return {"server_id": server_id, "connection_type": "local", "success": True}
+    elif server.connection_type == "agent":
         ok = agent_hub.is_online(server_id)
         return {"server_id": server_id, "connection_type": "agent", "success": ok}
     else:

@@ -63,7 +63,8 @@ The frontend talks to the backend over cookie-authenticated HTTP and WebSocket e
 
 - backup jobs
 - storage endpoints and secrets
-- encryption options
+- encryption keys (named passphrases for AES-256-GCM backup encryption)
+- per-job encryption settings
 - notification settings managed by the underlying tool
 
 This separation is important: the web layer augments BCK Manager, but does not replace its configuration source of truth for jobs.
@@ -87,6 +88,10 @@ Advantages:
 ### Hub With SSH
 
 For nodes without an agent, the hub can also execute remote actions over SSH.
+
+### Local Fleet Node
+
+The hub itself can be registered as a fleet node with `connection_type: "local"`. Commands are routed directly through the BCK Manager bridge rather than over an agent or SSH.  This is useful for managing the hub's own backups through the same fleet interface.
 
 ## WebSocket Flows
 
@@ -118,7 +123,7 @@ Remote agents maintain a WebSocket session to the hub and process commands such 
 ### Hub And Spoke
 
 - One central hub manages many nodes.
-- Nodes can be agent-managed or SSH-managed.
+- Nodes can be agent-managed, SSH-managed, or local (the hub itself).
 - Best fit for multi-server environments.
 
 ## Boundaries

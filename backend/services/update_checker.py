@@ -18,6 +18,9 @@ _cache_ts: float = 0.0
 
 async def check_for_update() -> Optional[dict]:
     """Return update info if a newer version is available.  Cached per interval."""
+    if not settings.update_check_enabled:
+        return None
+
     global _cache, _cache_ts
 
     now = time.time()

@@ -10,7 +10,7 @@ class Server(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True)
     hostname: str
-    connection_type: str                          # "agent" | "ssh"
+    connection_type: str                          # "agent" | "ssh" | "local"
     # Agent-specific
     agent_token_hash: Optional[str] = None        # bcrypt-hashed token
     agent_version: Optional[str] = None

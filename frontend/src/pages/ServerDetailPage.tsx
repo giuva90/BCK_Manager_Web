@@ -9,7 +9,7 @@ interface ServerDetail {
   id: number;
   name: string;
   hostname: string;
-  connection_type: 'agent' | 'ssh';
+  connection_type: 'agent' | 'ssh' | 'local';
   is_online: boolean;
   ssh_user?: string;
   ssh_port?: number;
@@ -104,11 +104,12 @@ export function ServerDetailPage() {
             <label className="block text-sm font-medium text-slate-300 mb-1">Connection Type</label>
             <select
               value={form.connection_type}
-              onChange={(e) => setForm((p) => ({ ...p, connection_type: e.target.value as 'agent' | 'ssh' }))}
+              onChange={(e) => setForm((p) => ({ ...p, connection_type: e.target.value as 'agent' | 'ssh' | 'local' }))}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             >
               <option value="ssh">SSH</option>
               <option value="agent">Agent</option>
+              <option value="local">Local (this hub)</option>
             </select>
           </div>
         </Section>
