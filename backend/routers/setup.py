@@ -29,6 +29,17 @@ _COOKIE_OPTS = {
 }
 
 
+@router.get("/setup")
+async def setup_status(session: Session = Depends(get_session)):
+    """Return whether initial setup is still required.
+
+    This endpoint requires no authentication so the frontend can check
+    first-run status before a user exists in the database.
+    """
+    count = session.exec(select(func.count()).select_from(User)).one()
+    return {"needs_setup": count == 0}
+
+
 @router.post("/setup")
 async def setup(
     body: SetupRequest,

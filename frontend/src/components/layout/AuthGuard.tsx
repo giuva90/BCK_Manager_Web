@@ -12,21 +12,27 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     async function check() {
+      // Check if first-run setup is required before attempting auth.
+      // This endpoint is public so it never returns 401 and cannot
+      // trigger the API client's automatic redirect to /login.
+      try {
+        const status = await api.get<{ needs_setup: boolean }>('/setup');
+        if (!cancelled && status.needs_setup) {
+          setNeedsSetup(true);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // If the setup-status endpoint is unreachable fall through to
+        // the normal auth check; the error will surface there instead.
+      }
+
+      // Setup is complete — verify the current user session.
       try {
         const user = await api.get<AuthUser>('/auth/me');
         if (!cancelled) setUser(user);
       } catch {
-        if (!cancelled) {
-          setUser(null);
-          // Check if setup is needed
-          try {
-            await api.get('/system/status');
-          } catch (e: unknown) {
-            if (e instanceof Error && 'status' in e && (e as { status: number }).status === 412) {
-              setNeedsSetup(true);
-            }
-          }
-        }
+        if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
