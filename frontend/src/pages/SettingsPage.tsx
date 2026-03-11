@@ -299,7 +299,16 @@ function S3EndpointsSection({
       if (data.success) toast.success(`Endpoint "${name}" is reachable`);
       else toast.error(`Endpoint "${name}" is not reachable`);
     },
-    onError: (_, name) => toast.error(`Test failed for "${name}"`),
+    onError: (error, name) => {
+      let detail = `Test failed for "${name}"`;
+      try {
+        const body = JSON.parse((error as Error).message);
+        if (body?.detail) detail = body.detail;
+      } catch {
+        if ((error as Error).message) detail = (error as Error).message;
+      }
+      toast.error(detail);
+    },
   });
 
   return (

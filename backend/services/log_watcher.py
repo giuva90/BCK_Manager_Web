@@ -10,9 +10,16 @@ from backend.config import settings
 logger = logging.getLogger("bck_web.log_watcher")
 
 
-async def tail_log(lines: int = 100) -> list[str]:
-    """Return the last *lines* lines from the BCK Manager log file."""
-    log_path = settings.bck_log_path
+def _resolve_path(source: str) -> str:
+    """Return the log file path for the requested source."""
+    if source == "bck":
+        return settings.bck_log_path
+    return settings.log_file  # "web" is the default
+
+
+async def tail_log(lines: int = 100, source: str = "web") -> list[str]:
+    """Return the last *lines* lines from the requested log file."""
+    log_path = _resolve_path(source)
     if not os.path.isfile(log_path):
         logger.debug("Log file not found: %s", log_path)
         return []
@@ -26,9 +33,9 @@ async def tail_log(lines: int = 100) -> list[str]:
     return await loop.run_in_executor(None, _read_tail)
 
 
-async def stream_log() -> AsyncIterator[str]:
+async def stream_log(source: str = "web") -> AsyncIterator[str]:
     """Async generator that yields new log lines as they appear (like tail -f)."""
-    log_path = settings.bck_log_path
+    log_path = _resolve_path(source)
     if not os.path.isfile(log_path):
         return
 

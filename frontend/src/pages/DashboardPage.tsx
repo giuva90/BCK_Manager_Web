@@ -35,7 +35,7 @@ export function DashboardPage() {
 
   const { data: logs } = useQuery<{ lines: string[]; count: number }>({
     queryKey: ['logs-tail'],
-    queryFn: () => api.get('/logs/tail?lines=15'),
+    queryFn: () => api.get('/logs/tail?lines=15&source=web'),
     refetchInterval: 10000,
   });
 

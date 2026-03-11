@@ -25,7 +25,13 @@ if settings.bck_manager_path not in sys.path:
 # Lazy imports — will fail gracefully if BCK Manager is not installed
 _bck_ready = False
 try:
-    from config_loader import load_config, get_enabled_jobs, get_endpoint_config, ConfigError  # type: ignore
+    from config_loader import load_config, get_enabled_jobs, get_endpoint_config  # type: ignore
+    # ConfigError was added in a later version of BCK Manager — fall back to a plain Exception subclass
+    try:
+        from config_loader import ConfigError  # type: ignore
+    except ImportError:
+        class ConfigError(Exception):  # type: ignore[no-redef]
+            pass
     from backup import run_backup_job, run_all_jobs  # type: ignore
     from restore import (  # type: ignore
         list_remote_backups,
@@ -259,11 +265,15 @@ async def bridge_test_s3(endpoint_name: str) -> bool:
     ep = next((e for e in config.get("s3_endpoints", []) if e.get("name") == endpoint_name), None)
     if ep is None:
         raise ValueError(f"Endpoint '{endpoint_name}' not found")
+    from s3_client import S3Client as _S3Client  # type: ignore  # local import avoids NameError if try-block failed
     bck_logger = _get_logger()
-    client = S3Client(
+    client = _S3Client(
         ep["endpoint_url"], ep["access_key"], ep["secret_key"], ep["region"], bck_logger
     )
-    return await run_in_thread(client.test_connection)
+    # Call list_buckets directly so boto3 exceptions propagate with the real error message.
+    # test_connection() catches and swallows all errors, returning False silently.
+    await run_in_thread(client.list_buckets)
+    return True
 
 
 async def bridge_list_buckets(endpoint_name: str) -> list[dict]:

@@ -16,15 +16,16 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 @router.get("/tail")
 async def get_tail(
     lines: int = Query(100, ge=1, le=5000),
+    source: str = Query("web", regex="^(web|bck)$"),
     server_id: Optional[int] = Query(None),
     _user: User = Depends(get_current_user),
 ):
-    log_lines = await tail_log(lines)
+    log_lines = await tail_log(lines, source=source)
     return {"lines": log_lines, "count": len(log_lines)}
 
 
 @router.websocket("/stream")
-async def ws_stream(websocket: WebSocket):
+async def ws_stream(websocket: WebSocket, source: str = Query("web")):
     # Authenticate via cookie
     token = websocket.cookies.get("access_token")
     if not token:
@@ -34,10 +35,12 @@ async def ws_stream(websocket: WebSocket):
     if payload is None:
         await websocket.close(code=4001, reason="Invalid token")
         return
+    if source not in ("web", "bck"):
+        source = "web"
 
     await websocket.accept()
     try:
-        async for line in stream_log():
+        async for line in stream_log(source=source):
             await websocket.send_text(json.dumps({"type": "log_line", "data": line}))
     except WebSocketDisconnect:
         pass
