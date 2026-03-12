@@ -169,44 +169,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Job Status Grid */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Job Status</h2>
-        {jobs.length === 0 ? (
-          <p className="text-slate-400 text-sm">No jobs configured.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {jobs.map((job) => (
-              <div
-                key={job.name}
-                className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex items-center justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{job.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <StatusBadge status={job.status} />
-                    {!job.enabled && (
-                      <span className="text-xs text-slate-500">disabled</span>
-                    )}
-                  </div>
-                  {job.error && (
-                    <p className="text-xs text-red-400 mt-1 truncate">{job.error}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => runJob.mutate(job.name)}
-                  disabled={job.status === 'running' || !job.enabled}
-                  className="ml-3 p-2 rounded-md hover:bg-slate-800 disabled:opacity-30 transition-colors"
-                  title="Run job"
-                >
-                  <Play className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Recent Logs */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Recent Logs</h2>
