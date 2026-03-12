@@ -111,7 +111,12 @@ sudo systemctl start bck-manager-agent
 
 ## Version
 
-Current application version: `0.1.0`.
+Current application version: `0.2.0`.
+
+The version is defined in **`backend/config.py`** (`app_version`) and is served
+by the backend at `GET /api/v1/system/status`. The dashboard reads it from
+that endpoint — there is no separate version file to update in the frontend.
+Keep `frontend/package.json` `"version"` in sync when cutting a release.
 
 ## License
 

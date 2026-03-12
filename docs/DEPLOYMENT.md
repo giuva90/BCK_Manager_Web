@@ -264,9 +264,26 @@ Recommended upgrade flow:
 1. Backup `.env`, SQLite DB, and the BCK Manager config.
 2. Pull the new repository revision.
 3. Review [../CHANGELOG.md](../CHANGELOG.md).
-4. Re-run the installer.
+4. Re-run the installer (it will stop the service automatically if running).
 5. Restart services.
 6. Validate login, jobs, fleet status, and logs.
+
+## Versioning
+
+The application version is the **single source of truth** defined in `backend/config.py` (`app_version`).
+
+- It is served by the API at `GET /api/v1/system/status` → `"version"` field.
+- The dashboard **reads it from the API** — no frontend rebuild is needed to display the correct version.
+- `frontend/package.json` `"version"` should be kept in sync with `app_version` when cutting a release.
+- `CHANGELOG.md` must have a matching `## <version>` entry.
+
+When bumping the version, update these three files:
+
+```
+backend/config.py          app_version = "x.y.z"
+frontend/package.json      "version": "x.y.z"
+CHANGELOG.md               ## x.y.z - YYYY-MM-DD
+```
 
 ## Rollback Basics
 
@@ -356,7 +373,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev server starts at `http://localhost:5173`.  All `/api` requests are proxied to `http://localhost:8080` automatically (configured in `vite.config.ts`), so no CORS changes are needed.
+The Vite dev server starts at `http://localhost:5173`.  All `/api` requests are proxied to the backend automatically (configured in `vite.config.ts`).  The proxy target port is read from `BCK_WEB_PORT` in the root `.env` file — if you change the backend port, only `.env` needs updating, no changes to `vite.config.ts` are required.
 
 ### 4 — First-run setup wizard
 

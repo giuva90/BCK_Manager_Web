@@ -20,6 +20,7 @@ export function RestorePage() {
   const [selectedJob, setSelectedJob] = useState('');
   const [selectedBackup, setSelectedBackup] = useState('');
   const [restoreMode, setRestoreMode] = useState<'new' | 'replace'>('new');
+  const [targetVolume, setTargetVolume] = useState('');
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: ['jobs'],
@@ -35,20 +36,27 @@ export function RestorePage() {
   const restoreFile = useMutation({
     mutationFn: () =>
       api.post(`/restore/${encodeURIComponent(selectedJob)}/file`, {
-        backup_key: selectedBackup,
+        s3_key: selectedBackup,
       }),
     onSuccess: () => toast.success('Restore completed'),
-    onError: () => toast.error('Restore failed'),
+    onError: (err: unknown) => {
+      const msg = (err as { detail?: string })?.detail;
+      toast.error(msg ? `Restore failed: ${msg}` : 'Restore failed');
+    },
   });
 
   const restoreVolume = useMutation({
     mutationFn: () =>
       api.post(`/restore/${encodeURIComponent(selectedJob)}/volume`, {
-        backup_key: selectedBackup,
+        s3_key: selectedBackup,
         mode: restoreMode,
+        ...(restoreMode === 'new' && targetVolume ? { target_volume: targetVolume } : {}),
       }),
     onSuccess: () => toast.success('Volume restore completed'),
-    onError: () => toast.error('Volume restore failed'),
+    onError: (err: unknown) => {
+      const msg = (err as { detail?: string })?.detail;
+      toast.error(msg ? `Volume restore failed: ${msg}` : 'Volume restore failed');
+    },
   });
 
   const selectedJobData = jobs.find((j) => j.name === selectedJob);
@@ -162,6 +170,20 @@ export function RestorePage() {
               <span className="text-sm">Replace existing</span>
             </label>
           </div>
+          {restoreMode === 'new' && (
+            <div className="mt-3">
+              <label className="block text-xs text-slate-400 mb-1">
+                Target volume name <span className="text-slate-500">(leave blank to use <code className="font-mono">&lt;job_volume&gt;_restored</code>)</span>
+              </label>
+              <input
+                type="text"
+                value={targetVolume}
+                onChange={(e) => setTargetVolume(e.target.value)}
+                placeholder="my_volume_restored"
+                className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              />
+            </div>
+          )}
           {restoreMode === 'replace' && (
             <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs">
               <AlertTriangle className="h-4 w-4" />

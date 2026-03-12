@@ -1,5 +1,6 @@
 """Restore routes — list backups, restore files/volumes."""
 
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 from backend.models.user import User
 from backend.auth.dependencies import require_operator_or_admin
 from backend.services.bck_bridge import (
+    _persist_execution,
     bridge_list_backups,
     bridge_restore_file,
     bridge_restore_volume,
@@ -23,7 +25,7 @@ class FileRestoreRequest(BaseModel):
 
 class VolumeRestoreRequest(BaseModel):
     s3_key: str
-    target_volume: str
+    target_volume: Optional[str] = None
     mode: str = "new"  # "new" | "replace"
     server_id: Optional[int] = None
 
@@ -55,14 +57,33 @@ async def list_backups(
 async def restore_file_route(
     job: str,
     body: FileRestoreRequest,
-    _user: User = Depends(require_operator_or_admin),
+    user: User = Depends(require_operator_or_admin),
 ):
+    started_at = datetime.now(timezone.utc)
+    error_msg: Optional[str] = None
+    success = False
     try:
         success = await bridge_restore_file(job, body.s3_key)
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+        error_msg = str(e)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        _persist_execution(
+            {
+                "job_name": job,
+                "success": success,
+                "error": error_msg,
+                "bucket": body.s3_key.split("/")[0] if "/" in body.s3_key else "",
+                "prefix": body.s3_key,
+                "triggered_by": f"restore:{user.username}",
+            },
+            started_at,
+            finished_at,
+            triggered_by=f"restore:{user.username}",
+        )
     return {"success": success, "job": job, "s3_key": body.s3_key}
 
 
@@ -70,9 +91,12 @@ async def restore_file_route(
 async def restore_volume_route(
     job: str,
     body: VolumeRestoreRequest,
-    _user: User = Depends(require_operator_or_admin),
+    user: User = Depends(require_operator_or_admin),
 ):
     replace_mode = body.mode == "replace"
+    started_at = datetime.now(timezone.utc)
+    error_msg: Optional[str] = None
+    success = False
     try:
         success = await bridge_restore_volume(
             job, body.s3_key, body.target_volume, replace_mode
@@ -80,11 +104,21 @@ async def restore_volume_route(
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
-    return {
-        "success": success,
-        "job": job,
-        "s3_key": body.s3_key,
-        "target_volume": body.target_volume,
-        "mode": body.mode,
-    }
+        error_msg = str(e)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        _persist_execution(
+            {
+                "job_name": job,
+                "success": success,
+                "error": error_msg,
+                "bucket": body.s3_key.split("/")[0] if "/" in body.s3_key else "",
+                "prefix": body.s3_key,
+                "triggered_by": f"restore-volume:{user.username}",
+            },
+            started_at,
+            finished_at,
+            triggered_by=f"restore-volume:{user.username}",
+        )
+    return {"success": success, "job": job, "s3_key": body.s3_key, "mode": body.mode}

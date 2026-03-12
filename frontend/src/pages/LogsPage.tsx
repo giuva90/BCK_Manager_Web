@@ -125,7 +125,11 @@ export function LogsPage() {
         onScroll={handleScroll}
         className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs font-mono text-slate-300 overflow-auto whitespace-pre-wrap"
       >
-        {lines.length === 0 ? 'Waiting for log data…' : lines.join('\n')}
+        {lines.length === 0
+          ? wsConnected
+            ? 'Connected — waiting for new log lines…'
+            : 'Log stream disconnected. Waiting to reconnect…'
+          : lines.join('\n')}
       </pre>
     </div>
   );

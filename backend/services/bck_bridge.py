@@ -295,12 +295,22 @@ async def bridge_restore_file(job_name: str, s3_key: str) -> bool:
 
 
 async def bridge_restore_volume(
-    job_name: str, s3_key: str, target_volume: str, replace_mode: bool
+    job_name: str, s3_key: str, target_volume: str | None, replace_mode: bool
 ) -> bool:
     config = await bridge_load_config()
     job = next((j for j in config.get("backup_jobs", []) if j["name"] == job_name), None)
     if job is None:
         raise ValueError(f"Job '{job_name}' not found")
+
+    # Derive target_volume from the job config when not explicitly provided
+    if not target_volume:
+        volume_name = job.get("volume_name", "")
+        if not volume_name:
+            raise ValueError(
+                f"Job '{job_name}' has no volume_name configured — cannot determine restore target"
+            )
+        target_volume = volume_name if replace_mode else f"{volume_name}_restored"
+
     bck_logger = _get_logger()
     return await run_in_thread(
         restore_volume, job, config, s3_key, target_volume, replace_mode, bck_logger

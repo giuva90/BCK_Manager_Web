@@ -35,7 +35,10 @@ class Settings(BaseSettings):
     update_check_interval_hours: int = Field(6, alias="BCK_WEB_UPDATE_CHECK_INTERVAL_HOURS")
 
     # App metadata
-    app_version: str = "0.1.0"
+    # Single source of truth for the application version.
+    # Update this when cutting a release — it is served via GET /api/v1/system/status
+    # and displayed on the dashboard. Keep in sync with frontend/package.json.
+    app_version: str = "0.2.0"
 
     model_config = {
         "env_file": ".env",
