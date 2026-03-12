@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { SearchableSelect, type SelectOption } from '../components/SearchableSelect';
 import { FilePicker } from '../components/FilePicker';
+import { useAuthStore } from '../store/authStore';
 
 interface Job {
   name: string;
@@ -23,6 +24,9 @@ export function JobsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+  const canRun = user?.role === 'admin' || user?.role === 'operator';
 
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ['jobs'],
@@ -56,13 +60,15 @@ export function JobsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Backup Jobs</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Job
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-md text-sm font-medium transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New Job
+          </button>
+        )}
       </div>
 
       {jobs.length === 0 ? (
@@ -83,17 +89,19 @@ export function JobsPage() {
                   <h3 className="font-semibold truncate">{job.name}</h3>
                   <span className="text-xs text-slate-400 uppercase">{job.mode}</span>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleJob.mutate(job.name); }}
-                  title={job.enabled ? 'Disable' : 'Enable'}
-                  className="text-slate-400 hover:text-slate-200"
-                >
-                  {job.enabled ? (
-                    <ToggleRight className="h-5 w-5 text-green-400" />
-                  ) : (
-                    <ToggleLeft className="h-5 w-5 text-slate-500" />
-                  )}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleJob.mutate(job.name); }}
+                    title={job.enabled ? 'Disable' : 'Enable'}
+                    className="text-slate-400 hover:text-slate-200"
+                  >
+                    {job.enabled ? (
+                      <ToggleRight className="h-5 w-5 text-green-400" />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-slate-500" />
+                    )}
+                  </button>
+                )}
               </div>
 
               <div className="space-y-1 text-sm text-slate-400">
@@ -103,27 +111,31 @@ export function JobsPage() {
               </div>
 
               <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">
-                <button
-                  onClick={(e) => { e.stopPropagation(); runJob.mutate(job.name); }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 transition-colors"
-                >
-                  <Play className="h-3 w-3" /> Run
-                </button>
+                {canRun && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); runJob.mutate(job.name); }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+                  >
+                    <Play className="h-3 w-3" /> Run
+                  </button>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${encodeURIComponent(job.name)}`); }}
                   className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 transition-colors"
                 >
-                  <Pencil className="h-3 w-3" /> Edit
+                  <Pencil className="h-3 w-3" /> {isAdmin ? 'Edit' : 'View'}
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Delete job "${job.name}"?`)) deleteJob.mutate(job.name);
-                  }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-slate-800 hover:bg-red-900/50 text-red-400 transition-colors ml-auto"
-                >
-                  <Trash2 className="h-3 w-3" /> Delete
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete job "${job.name}"?`)) deleteJob.mutate(job.name);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-slate-800 hover:bg-red-900/50 text-red-400 transition-colors ml-auto"
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -158,7 +170,7 @@ interface DockerVolume {
 }
 
 interface Bucket {
-  Name: string;
+  name: string;
 }
 
 function JobCreateModal({ onClose }: { onClose: () => void }) {
@@ -227,8 +239,8 @@ function JobCreateModal({ onClose }: { onClose: () => void }) {
   }));
 
   const bucketOptions: SelectOption[] = buckets.map((b) => ({
-    value: b.Name,
-    label: b.Name,
+    value: b.name,
+    label: b.name,
   }));
 
   const volumeOptions: SelectOption[] = volumes.map((v) => {

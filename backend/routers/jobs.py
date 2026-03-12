@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.models.user import User
-from backend.auth.dependencies import get_current_user, require_operator_or_admin
+from backend.auth.dependencies import get_current_user, require_admin
 from backend.schemas.backup import JobCreate, JobUpdate, JobRead
 from backend.services.config_manager import (
     get_jobs,
@@ -68,7 +68,7 @@ async def get_job(
 @router.post("", response_model=JobRead, status_code=201)
 async def create_job(
     body: JobCreate,
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     existing = get_job_by_name(body.name)
     if existing:
@@ -88,7 +88,7 @@ async def create_job(
 async def update_job_route(
     name: str,
     body: JobUpdate,
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     if get_job_by_name(name) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{name}' not found")
@@ -102,7 +102,7 @@ async def update_job_route(
 @router.delete("/{name}", status_code=204)
 async def delete_job_route(
     name: str,
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     try:
         delete_job(name)
@@ -114,7 +114,7 @@ async def delete_job_route(
 @router.patch("/{name}/toggle")
 async def toggle_job_route(
     name: str,
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     try:
         new_state = toggle_job(name)

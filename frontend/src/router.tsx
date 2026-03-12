@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { AuthGuard } from './components/layout/AuthGuard';
+import { RoleGuard } from './components/layout/RoleGuard';
 import { SetupPage } from './pages/SetupPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -39,14 +40,14 @@ export const router = createBrowserRouter([
       { path: 'jobs', element: <JobsPage /> },
       { path: 'jobs/:name', element: <JobDetailPage /> },
       { path: 'storage', element: <StorageExplorerPage /> },
-      { path: 'restore', element: <RestorePage /> },
+      { path: 'restore', element: <RoleGuard allowedRoles={['admin', 'operator']}><RestorePage /></RoleGuard> },
       { path: 'schedule', element: <SchedulePage /> },
       { path: 'logs', element: <LogsPage /> },
-      { path: 'terminal', element: <TerminalPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: 'users', element: <UsersPage /> },
-      { path: 'fleet', element: <FleetPage /> },
-      { path: 'fleet/:id', element: <ServerDetailPage /> },
+      { path: 'terminal', element: <RoleGuard allowedRoles={['admin', 'operator']}><TerminalPage /></RoleGuard> },
+      { path: 'settings', element: <RoleGuard allowedRoles={['admin']}><SettingsPage /></RoleGuard> },
+      { path: 'users', element: <RoleGuard allowedRoles={['admin']}><UsersPage /></RoleGuard> },
+      { path: 'fleet', element: <RoleGuard allowedRoles={['admin']}><FleetPage /></RoleGuard> },
+      { path: 'fleet/:id', element: <RoleGuard allowedRoles={['admin']}><ServerDetailPage /></RoleGuard> },
     ],
   },
   { path: '*', element: <Navigate to="/dashboard" replace /> },

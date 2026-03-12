@@ -40,7 +40,15 @@ async def list_backups(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     # Sort by last_modified descending (newest first)
     backups.sort(key=lambda x: x.get("LastModified", ""), reverse=True)
-    return backups
+    # Normalize boto3 uppercase keys to frontend-expected lowercase
+    return [
+        {
+            "key": b.get("Key", ""),
+            "size": b.get("Size", 0),
+            "last_modified": b.get("LastModified", ""),
+        }
+        for b in backups
+    ]
 
 
 @router.post("/{job}/file")

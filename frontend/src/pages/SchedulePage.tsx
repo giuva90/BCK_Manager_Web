@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Plus, Trash2, ToggleLeft, ToggleRight, Clock } from 'lucide-react';
 import { api } from '../api/client';
 import { toast } from 'sonner';
+import { useAuthStore } from '../store/authStore';
 
 interface CronJob {
   id: number;
@@ -22,6 +23,8 @@ interface Job {
 export function SchedulePage() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
 
   const { data: cronJobs = [], isLoading } = useQuery<CronJob[]>({
     queryKey: ['cron-jobs'],
@@ -55,13 +58,15 @@ export function SchedulePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Schedule</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Schedule
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-md text-sm font-medium transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New Schedule
+          </button>
+        )}
       </div>
 
       {cronJobs.length === 0 ? (
@@ -88,21 +93,30 @@ export function SchedulePage() {
                   <td className="px-4 py-3 text-slate-400">{cron.job_name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{cron.cron_expression}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => toggleCron.mutate(cron)}>
-                      {cron.enabled ? (
-                        <ToggleRight className="h-5 w-5 text-green-400" />
-                      ) : (
-                        <ToggleLeft className="h-5 w-5 text-slate-500" />
-                      )}
-                    </button>
+                    {isAdmin && (
+                      <button onClick={() => toggleCron.mutate(cron)}>
+                        {cron.enabled ? (
+                          <ToggleRight className="h-5 w-5 text-green-400" />
+                        ) : (
+                          <ToggleLeft className="h-5 w-5 text-slate-500" />
+                        )}
+                      </button>
+                    )}
+                    {!isAdmin && (
+                      cron.enabled
+                        ? <span className="text-xs text-green-400">Active</span>
+                        : <span className="text-xs text-slate-500">Disabled</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => { if (confirm('Delete this schedule?')) deleteCron.mutate(cron.id); }}
-                      className="p-1 rounded hover:bg-red-900/50 text-red-400 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => { if (confirm('Delete this schedule?')) deleteCron.mutate(cron.id); }}
+                        className="p-1 rounded hover:bg-red-900/50 text-red-400 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

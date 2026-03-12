@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { SearchableSelect, type SelectOption } from '../components/SearchableSelect';
 import { FilePicker } from '../components/FilePicker';
+import { useAuthStore } from '../store/authStore';
 
 interface JobDetail {
   name: string;
@@ -30,12 +31,15 @@ interface DockerVolume {
   Driver: string;
   containers: Array<{ id: string; name: string; state: string; image: string }>;
 }
-interface Bucket { Name: string }
+interface Bucket { name: string }
 
 export function JobDetailPage() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+  const canRun = user?.role === 'admin' || user?.role === 'operator';
 
   const { data: job, isLoading } = useQuery<JobDetail>({
     queryKey: ['job', name],
@@ -85,7 +89,7 @@ export function JobDetailPage() {
     sublabel: `${ep.endpoint_url}${ep.region ? ` · ${ep.region}` : ''}`,
   }));
 
-  const bucketOptions: SelectOption[] = buckets.map((b) => ({ value: b.Name, label: b.Name }));
+  const bucketOptions: SelectOption[] = buckets.map((b) => ({ value: b.name, label: b.name }));
 
   const encKeyOptions: SelectOption[] = encKeys.map((k) => ({
     value: k.name,
@@ -151,12 +155,14 @@ export function JobDetailPage() {
           <p className="text-sm text-slate-400 uppercase">{job.mode}</p>
         </div>
         <div className="ml-auto flex gap-2">
-          <button
-            onClick={() => runJob.mutate()}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-sm transition-colors"
-          >
-            <Play className="h-4 w-4" /> Run now
-          </button>
+          {canRun && (
+            <button
+              onClick={() => runJob.mutate()}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-sm transition-colors"
+            >
+              <Play className="h-4 w-4" /> Run now
+            </button>
+          )}
         </div>
       </div>
 
@@ -316,14 +322,16 @@ export function JobDetailPage() {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={updateJob.isPending}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
-        >
-          <Save className="h-4 w-4" />
-          {updateJob.isPending ? 'Saving…' : 'Save Changes'}
-        </button>
+        {isAdmin && (
+          <button
+            type="submit"
+            disabled={updateJob.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+          >
+            <Save className="h-4 w-4" />
+            {updateJob.isPending ? 'Saving…' : 'Save Changes'}
+          </button>
+        )}
       </form>
     </div>
   );

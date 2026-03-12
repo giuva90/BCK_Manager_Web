@@ -5,11 +5,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.models.user import User
-from backend.auth.dependencies import get_current_user, require_operator_or_admin
+from backend.auth.dependencies import get_current_user, require_admin, require_operator_or_admin
 from backend.schemas.s3 import S3TestRequest
 from backend.services.bck_bridge import (
     bridge_list_buckets,
     bridge_browse_storage,
+    bridge_delete_object,
     bridge_test_s3,
     bridge_load_config,
 )
@@ -31,7 +32,14 @@ async def list_buckets(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
-    return buckets
+    # Normalize boto3 uppercase keys to frontend-expected lowercase
+    return [
+        {
+            "name": b.get("Name", ""),
+            "creation_date": b.get("CreationDate", ""),
+        }
+        for b in buckets
+    ]
 
 
 @router.get("/browse")
@@ -46,10 +54,43 @@ async def browse_bucket(
         objects = await bridge_browse_storage(endpoint, bucket, prefix)
     except ValueError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
-    # Mark .enc files
+
+    # Extract folder-like common prefixes and direct files from flat object list
+    folders: set[str] = set()
+    files: list[dict] = []
     for obj in objects:
-        obj["is_encrypted"] = obj.get("Key", "").endswith(".enc")
-    return objects
+        key = obj.get("Key", "")
+        # Strip the current prefix to get the relative part
+        relative = key[len(prefix):]
+        if "/" in relative:
+            # This key is nested — extract the immediate subfolder
+            folder_name = relative.split("/")[0]
+            folders.add(prefix + folder_name + "/")
+        else:
+            if relative:  # skip the prefix-only key itself
+                files.append(obj)
+
+    result: list[dict] = []
+    # Add folder entries
+    for folder_key in sorted(folders):
+        result.append({
+            "key": folder_key,
+            "size": 0,
+            "last_modified": "",
+            "is_folder": True,
+            "is_encrypted": False,
+        })
+    # Add file entries with normalized keys
+    for obj in files:
+        key = obj.get("Key", "")
+        result.append({
+            "key": key,
+            "size": obj.get("Size", 0),
+            "last_modified": obj.get("LastModified", ""),
+            "is_folder": False,
+            "is_encrypted": key.endswith(".enc"),
+        })
+    return result
 
 
 @router.get("/download")
@@ -93,6 +134,25 @@ async def download_object(
 
     try:
         return await stream_s3_download(ep, bucket, key, decrypt, passphrase)
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+@router.delete("/object", status_code=204)
+async def delete_object_route(
+    endpoint: str = Query(...),
+    bucket: str = Query(...),
+    key: str = Query(...),
+    _user: User = Depends(require_admin),
+):
+    # Validate endpoint exists in config
+    config = read_config()
+    endpoints = config.get("s3_endpoints", [])
+    ep = next((e for e in endpoints if e["name"] == endpoint), None)
+    if ep is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Endpoint '{endpoint}' not found")
+    try:
+        await bridge_delete_object(endpoint, bucket, key)
     except Exception as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 

@@ -17,10 +17,10 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/jobs', icon: FolderArchive, label: 'Jobs' },
   { to: '/storage', icon: HardDrive, label: 'Storage' },
-  { to: '/restore', icon: RotateCcw, label: 'Restore' },
+  { to: '/restore', icon: RotateCcw, label: 'Restore', minRole: 'operator' as const },
   { to: '/schedule', icon: Clock, label: 'Schedule' },
   { to: '/logs', icon: FileText, label: 'Logs' },
-  { to: '/terminal', icon: Terminal, label: 'Terminal' },
+  { to: '/terminal', icon: Terminal, label: 'Terminal', minRole: 'operator' as const },
 ];
 
 const adminItems = [
@@ -32,6 +32,12 @@ const adminItems = [
 export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'admin';
+  const isOperatorOrAdmin = user?.role === 'admin' || user?.role === 'operator';
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (!('minRole' in item)) return true;
+    return item.minRole === 'operator' ? isOperatorOrAdmin : isAdmin;
+  });
 
   return (
     <aside className="w-56 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
@@ -43,7 +49,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

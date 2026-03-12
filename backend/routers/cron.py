@@ -9,7 +9,7 @@ from typing import Optional
 from backend.database import get_session
 from backend.models.user import User
 from backend.models.cron_job import CronJob
-from backend.auth.dependencies import require_operator_or_admin, get_current_user
+from backend.auth.dependencies import require_admin, get_current_user
 from backend.schemas.cron import CronJobCreate, CronJobUpdate, CronJobRead
 from backend.services.cron_manager import build_command, sync_to_crontab, get_next_runs
 
@@ -55,7 +55,7 @@ async def list_cron_jobs(
 async def create_cron_job(
     body: CronJobCreate,
     session: Session = Depends(get_session),
-    user: User = Depends(require_operator_or_admin),
+    user: User = Depends(require_admin),
 ):
     cron = CronJob(
         label=body.label,
@@ -79,7 +79,7 @@ async def update_cron_job(
     cron_id: int,
     body: CronJobUpdate,
     session: Session = Depends(get_session),
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     cron = session.get(CronJob, cron_id)
     if cron is None:
@@ -106,7 +106,7 @@ async def update_cron_job(
 async def delete_cron_job(
     cron_id: int,
     session: Session = Depends(get_session),
-    _user: User = Depends(require_operator_or_admin),
+    _user: User = Depends(require_admin),
 ):
     cron = session.get(CronJob, cron_id)
     if cron is None:

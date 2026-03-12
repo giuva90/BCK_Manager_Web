@@ -293,6 +293,26 @@ async def bridge_browse_storage(
     )
 
 
+async def bridge_delete_object(
+    endpoint_name: str, bucket: str, key: str
+) -> bool:
+    from backend.services.config_manager import read_config
+    config = read_config()
+    ep = next(
+        (e for e in config.get("s3_endpoints", []) if e.get("name") == endpoint_name),
+        None,
+    )
+    if ep is None:
+        raise ValueError(f"Endpoint '{endpoint_name}' not found")
+    from s3_client import S3Client as _S3Client  # type: ignore
+    bck_logger = _get_logger()
+    client = _S3Client(
+        ep["endpoint_url"], ep["access_key"], ep["secret_key"], ep["region"], bck_logger
+    )
+    await run_in_thread(client.delete_object, bucket, key)
+    return True
+
+
 async def bridge_docker_available() -> bool:
     bck_logger = _get_logger()
     return await run_in_thread(docker_available, bck_logger)
