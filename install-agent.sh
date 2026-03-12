@@ -16,7 +16,46 @@ log()  { echo -e "${GREEN}[+]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+# ── Uninstall mode ──────────────────────────────────────────────
+if [[ "${1:-}" == "--uninstall" ]]; then
+    [[ $EUID -ne 0 ]] && err "This script must be run as root"
+    echo ""
+    warn "This will permanently remove the BCK Manager Agent, its data, logs, and service user."
+    read -r -p "Are you sure? [y/N] " _confirm
+    [[ "${_confirm,,}" != "y" ]] && { log "Aborted."; exit 0; }
+
+    log "Stopping and disabling bck-manager-agent service…"
+    systemctl stop bck-manager-agent 2>/dev/null || true
+    systemctl disable bck-manager-agent 2>/dev/null || true
+    rm -f /etc/systemd/system/bck-manager-agent.service
+    systemctl daemon-reload
+
+    log "Removing agent directory: $AGENT_DIR"
+    rm -rf "$AGENT_DIR"
+
+    log "Removing log directory: /var/log/bck_manager_agent"
+    rm -rf /var/log/bck_manager_agent
+
+    if id "$SERVICE_USER" &>/dev/null; then
+        log "Removing service user: $SERVICE_USER"
+        userdel "$SERVICE_USER" 2>/dev/null || true
+    fi
+
+    echo ""
+    log "BCK Manager Agent has been uninstalled."
+    exit 0
+fi
+
 [[ $EUID -ne 0 ]] && err "This script must be run as root"
+
+# ── Stop service if currently running ───────────────────────────
+if systemctl is-active --quiet bck-manager-agent 2>/dev/null; then
+    log "Stopping bck-manager-agent service for upgrade…"
+    systemctl stop bck-manager-agent
+    _WAS_RUNNING=1
+else
+    _WAS_RUNNING=0
+fi
 
 # ── System deps ──────────────────────────────────────────────────
 log "Installing system dependencies…"
@@ -87,7 +126,17 @@ fi
 echo ""
 log "Agent installation complete!"
 echo ""
-echo "  Next steps:"
-echo "    1. Edit $AGENT_DIR/.env with your Hub URL and token"
-echo "    2. Start: systemctl start bck-manager-agent"
+if [[ "$_WAS_RUNNING" -eq 1 ]]; then
+    echo -e "  ${YELLOW}The service was stopped for the upgrade.${NC}"
+    echo "  Restart it with:"
+    echo ""
+    echo "    systemctl start bck-manager-agent"
+else
+    echo "  Next steps:"
+    echo "    1. Edit $AGENT_DIR/.env with your settings (HUB_URL, HUB_TOKEN, AGENT_ID)"
+    echo "    2. Start the service:  systemctl start bck-manager-agent"
+    echo "    3. The agent will appear in the fleet dashboard after connecting"
+fi
+echo ""
+echo "  To uninstall:  sudo bash install-agent.sh --uninstall"
 echo ""

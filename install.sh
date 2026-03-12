@@ -17,6 +17,36 @@ log()  { echo -e "${GREEN}[+]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+# ── Uninstall mode ──────────────────────────────────────────────
+if [[ "${1:-}" == "--uninstall" ]]; then
+    [[ $EUID -ne 0 ]] && err "This script must be run as root"
+    echo ""
+    warn "This will permanently remove BCK Manager Web, its data, logs, and service user."
+    read -r -p "Are you sure? [y/N] " _confirm
+    [[ "${_confirm,,}" != "y" ]] && { log "Aborted."; exit 0; }
+
+    log "Stopping and disabling bck-manager-web service…"
+    systemctl stop bck-manager-web 2>/dev/null || true
+    systemctl disable bck-manager-web 2>/dev/null || true
+    rm -f /etc/systemd/system/bck-manager-web.service
+    systemctl daemon-reload
+
+    log "Removing application directory: $APP_DIR"
+    rm -rf "$APP_DIR"
+
+    log "Removing log directory: /var/log/bck_manager_web"
+    rm -rf /var/log/bck_manager_web
+
+    if id "$SERVICE_USER" &>/dev/null; then
+        log "Removing service user: $SERVICE_USER"
+        userdel "$SERVICE_USER" 2>/dev/null || true
+    fi
+
+    echo ""
+    log "BCK Manager Web has been uninstalled."
+    exit 0
+fi
+
 require_node_20() {
     if ! command -v node &>/dev/null; then
         err "Node.js is required to build the frontend"
@@ -31,6 +61,15 @@ require_node_20() {
 
 # Check root
 [[ $EUID -ne 0 ]] && err "This script must be run as root"
+
+# ── Stop service if currently running ───────────────────────────
+if systemctl is-active --quiet bck-manager-web 2>/dev/null; then
+    log "Stopping bck-manager-web service for upgrade…"
+    systemctl stop bck-manager-web
+    _WAS_RUNNING=1
+else
+    _WAS_RUNNING=0
+fi
 
 # ── System dependencies ──────────────────────────────────────────
 log "Installing system dependencies…"
@@ -149,8 +188,17 @@ fi
 echo ""
 log "Installation complete!"
 echo ""
-echo "  Next steps:"
-echo "    1. Edit $APP_DIR/.env with your settings"
-echo "    2. Start the service:  systemctl start bck-manager-web"
-echo "    3. Open http://your-server:8080 and create your admin account"
+if [[ "$_WAS_RUNNING" -eq 1 ]]; then
+    echo -e "  ${YELLOW}The service was stopped for the upgrade.${NC}"
+    echo "  Restart it with:"
+    echo ""
+    echo "    systemctl start bck-manager-web"
+else
+    echo "  Next steps:"
+    echo "    1. Edit $APP_DIR/.env with your settings"
+    echo "    2. Start the service:  systemctl start bck-manager-web"
+    echo "    3. Open http://your-server:8080 and create your admin account"
+fi
+echo ""
+echo "  To uninstall:  sudo bash install.sh --uninstall"
 echo ""

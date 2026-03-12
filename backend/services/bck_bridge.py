@@ -5,6 +5,7 @@ call in ``run_in_executor`` so FastAPI's event loop is never blocked.
 """
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -75,6 +76,57 @@ async def run_in_thread(fn, *args):
         raise RuntimeError(
             f"BCK Manager exited with code {exc.code} — check config.yaml for errors"
         ) from exc
+
+
+# ---------------------------------------------------------------------------
+# Persist job execution to database
+# ---------------------------------------------------------------------------
+def _persist_execution(
+    result: dict,
+    started_at: datetime,
+    finished_at: datetime,
+    triggered_by: str,
+    server_id: int = 0,
+) -> None:
+    """Save a job execution record to SQLite."""
+    from sqlmodel import Session as DBSession
+    from backend.database import engine
+    from backend.models.job_execution import JobExecution
+
+    uploaded = result.get("uploaded_files", [])
+    total_size = sum(f.get("size", 0) for f in uploaded) if isinstance(uploaded, list) else 0
+    duration = (finished_at - started_at).total_seconds()
+
+    # Serialize result to JSON, handling datetime objects
+    def _default(o: Any) -> str:
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return str(o)
+
+    try:
+        result_str = json.dumps(result, default=_default)
+    except Exception:
+        result_str = None
+
+    execution = JobExecution(
+        job_name=result.get("job_name", "unknown"),
+        server_id=server_id,
+        status="success" if result.get("success") else "failed",
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_seconds=round(duration, 2),
+        triggered_by=triggered_by,
+        error=result.get("error"),
+        uploaded_files=len(uploaded) if isinstance(uploaded, list) else 0,
+        uploaded_size=total_size,
+        bucket=result.get("bucket", ""),
+        prefix=result.get("prefix", ""),
+        encrypted=result.get("encrypted", False),
+        result_json=result_str,
+    )
+    with DBSession(engine) as session:
+        session.add(execution)
+        session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -167,9 +219,10 @@ async def bridge_run_job(
     job_name: str, triggered_by: str = "system", server_id: int = 0
 ) -> dict:
     key = _state_key(job_name, server_id)
+    started = datetime.utcnow()
     _job_states[key] = JobState(
         status=JobStatus.RUNNING,
-        started_at=datetime.utcnow(),
+        started_at=started,
         triggered_by=triggered_by,
     )
     try:
@@ -183,31 +236,38 @@ async def bridge_run_job(
         state.status = JobStatus.SUCCESS if result.get("success") else JobStatus.FAILED
         state.finished_at = datetime.utcnow()
         state.last_result = result
+        _persist_execution(result, started, state.finished_at, triggered_by, server_id)
         return result
     except Exception as exc:
+        finished = datetime.utcnow()
         state = _job_states.get(key, JobState())
         state.status = JobStatus.FAILED
-        state.finished_at = datetime.utcnow()
-        state.last_result = {"success": False, "error": str(exc)}
+        state.finished_at = finished
+        error_result = {"success": False, "error": str(exc), "job_name": job_name}
+        state.last_result = error_result
         _job_states[key] = state
+        _persist_execution(error_result, started, finished, triggered_by, server_id)
         raise
 
 
 async def bridge_run_all(triggered_by: str = "system", server_id: int = 0) -> dict:
     config = await bridge_load_config()
     bck_logger = _get_logger()
+    started = datetime.utcnow()
     total, succeeded, failed, results = await run_in_thread(
         run_all_jobs, config, bck_logger
     )
-    # Update individual job states
+    finished = datetime.utcnow()
+    # Update individual job states and persist each execution
     for r in results:
         key = _state_key(r["job_name"], server_id)
         _job_states[key] = JobState(
             status=JobStatus.SUCCESS if r.get("success") else JobStatus.FAILED,
-            finished_at=datetime.utcnow(),
+            finished_at=finished,
             last_result=r,
             triggered_by=triggered_by,
         )
+        _persist_execution(r, started, finished, triggered_by, server_id)
     return {
         "total": total,
         "succeeded": succeeded,

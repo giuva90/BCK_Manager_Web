@@ -10,12 +10,14 @@ import {
   Settings,
   Users,
   Network,
+  History,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/jobs', icon: FolderArchive, label: 'Jobs' },
+  { to: '/history', icon: History, label: 'History' },
   { to: '/storage', icon: HardDrive, label: 'Storage' },
   { to: '/restore', icon: RotateCcw, label: 'Restore', minRole: 'operator' as const },
   { to: '/schedule', icon: Clock, label: 'Schedule' },

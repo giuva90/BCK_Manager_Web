@@ -93,3 +93,40 @@ class JobStatusRead(BaseModel):
 
 class RunRequest(BaseModel):
     server_id: Optional[int] = None
+
+
+# --- Execution history ---
+
+class JobExecutionRead(BaseModel):
+    id: int
+    job_name: str
+    server_id: int
+    status: str
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+    triggered_by: str
+    error: Optional[str] = None
+    uploaded_files: int = 0
+    uploaded_size: int = 0
+    bucket: str = ""
+    prefix: str = ""
+    encrypted: bool = False
+    result_json: Optional[str] = None
+
+
+class JobExecutionList(BaseModel):
+    items: list[JobExecutionRead]
+    total: int
+    page: int
+    page_size: int
+
+
+class HistoryStats(BaseModel):
+    total_24h: int = 0
+    success_24h: int = 0
+    failed_24h: int = 0
+    total_7d: int = 0
+    success_7d: int = 0
+    failed_7d: int = 0
+    recent: list[JobExecutionRead] = []

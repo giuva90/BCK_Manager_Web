@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Play, FolderArchive, Clock, HardDrive, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, FolderArchive, Clock, HardDrive, AlertCircle, CheckCircle2, XCircle, Activity } from 'lucide-react';
 import { api } from '../api/client';
 import { toast } from 'sonner';
 
@@ -21,7 +22,29 @@ interface SystemStatus {
   bck_manager_path: string;
 }
 
+interface RecentExecution {
+  id: number;
+  job_name: string;
+  server_id: number;
+  status: string;
+  started_at: string;
+  duration_seconds: number | null;
+  error: string | null;
+}
+
+interface HistoryStats {
+  total_24h: number;
+  success_24h: number;
+  failed_24h: number;
+  total_7d: number;
+  success_7d: number;
+  failed_7d: number;
+  recent: RecentExecution[];
+}
+
 export function DashboardPage() {
+  const navigate = useNavigate();
+
   const { data: status } = useQuery<SystemStatus>({
     queryKey: ['system-status'],
     queryFn: () => api.get('/system/status'),
@@ -37,6 +60,12 @@ export function DashboardPage() {
     queryKey: ['logs-tail'],
     queryFn: () => api.get('/logs/tail?lines=15&source=web'),
     refetchInterval: 10000,
+  });
+
+  const { data: historyStats } = useQuery<HistoryStats>({
+    queryKey: ['history-stats'],
+    queryFn: () => api.get('/history/stats'),
+    refetchInterval: 15000,
   });
 
   const runAll = useMutation({
@@ -70,12 +99,75 @@ export function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard icon={FolderArchive} label="Total Jobs" value={totalJobs} />
         <StatCard icon={CheckCircle2} label="Enabled" value={enabledJobs} color="text-green-400" />
         <StatCard icon={Clock} label="Running" value={runningJobs.length} color="text-blue-400" />
+        <StatCard
+          icon={Activity}
+          label="Last 24h"
+          value={historyStats ? `${historyStats.success_24h} ✓ / ${historyStats.failed_24h} ✗` : '—'}
+          color={historyStats && historyStats.failed_24h > 0 ? 'text-red-400' : 'text-green-400'}
+        />
         <StatCard icon={HardDrive} label="Version" value={status?.version ?? '—'} />
       </div>
+
+      {/* Recent Executions */}
+      {historyStats && historyStats.recent.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Recent Executions</h2>
+            <button
+              onClick={() => navigate('/history')}
+              className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              View all →
+            </button>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-left text-slate-400">
+                  <th className="px-4 py-2 font-medium w-8"></th>
+                  <th className="px-4 py-2 font-medium">Job</th>
+                  <th className="px-4 py-2 font-medium">Time</th>
+                  <th className="px-4 py-2 font-medium w-20">Duration</th>
+                  <th className="px-4 py-2 font-medium">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyStats.recent.map((exec) => (
+                  <tr
+                    key={exec.id}
+                    onClick={() => navigate(`/history?job_name=${encodeURIComponent(exec.job_name)}`)}
+                    className={`border-b border-slate-800/50 cursor-pointer transition-colors ${
+                      exec.status === 'failed' ? 'bg-red-900/5 hover:bg-red-900/10' : 'hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <td className="px-4 py-2">
+                      {exec.status === 'success' ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-400" />
+                      )}
+                    </td>
+                    <td className="px-4 py-2 font-medium">{exec.job_name}</td>
+                    <td className="px-4 py-2 text-slate-400">{new Date(exec.started_at).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-slate-400">
+                      {exec.duration_seconds != null
+                        ? exec.duration_seconds < 60
+                          ? `${exec.duration_seconds.toFixed(1)}s`
+                          : `${Math.floor(exec.duration_seconds / 60)}m ${Math.round(exec.duration_seconds % 60)}s`
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-2 text-red-400 truncate max-w-xs">{exec.error || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Job Status Grid */}
       <div>

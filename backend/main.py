@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.logging_config import setup_logging
 from backend.database import init_db
+import backend.models  # noqa: F401 — ensure all models are registered for create_all
 
 # Initialise logging as early as possible so every module inherits it.
 setup_logging(settings.log_level, settings.log_file)
@@ -64,7 +65,7 @@ def create_app() -> FastAPI:
     # --- Register API routers ---
     from backend.routers import auth, setup, users, jobs, run, storage
     from backend.routers import filesystem, restore, retention, cron, logs
-    from backend.routers import system, fleet, terminal
+    from backend.routers import system, fleet, terminal, history
 
     prefix = "/api/v1"
     app.include_router(auth.router, prefix=prefix)
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(system.router, prefix=prefix)
     app.include_router(fleet.router, prefix=prefix)
     app.include_router(terminal.router, prefix=prefix)
+    app.include_router(history.router, prefix=prefix)
 
     # --- Serve frontend static files (production) ---
     import os

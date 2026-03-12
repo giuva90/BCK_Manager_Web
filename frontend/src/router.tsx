@@ -16,6 +16,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { UsersPage } from './pages/UsersPage';
 import { FleetPage } from './pages/FleetPage';
 import { ServerDetailPage } from './pages/ServerDetailPage';
+import { HistoryPage } from './pages/HistoryPage';
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'jobs', element: <JobsPage /> },
       { path: 'jobs/:name', element: <JobDetailPage /> },
+      { path: 'history', element: <HistoryPage /> },
       { path: 'storage', element: <StorageExplorerPage /> },
       { path: 'restore', element: <RoleGuard allowedRoles={['admin', 'operator']}><RestorePage /></RoleGuard> },
       { path: 'schedule', element: <SchedulePage /> },

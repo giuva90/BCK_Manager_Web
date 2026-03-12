@@ -244,6 +244,20 @@ async def agent_websocket(
             elif msg.type in ("result", "pong", "log_line", "job_started", "job_finished"):
                 # Resolve pending command futures
                 agent_session.resolve(msg.id, msg)
+                # Persist fleet job execution when finished
+                if msg.type == "job_finished" and isinstance(msg.payload, dict):
+                    try:
+                        from backend.services.bck_bridge import _persist_execution
+                        payload = msg.payload
+                        result = payload.get("result", payload)
+                        started_str = payload.get("started_at")
+                        finished_str = payload.get("finished_at")
+                        started_at = datetime.fromisoformat(started_str) if started_str else datetime.utcnow()
+                        finished_at = datetime.fromisoformat(finished_str) if finished_str else datetime.utcnow()
+                        triggered_by = payload.get("triggered_by", "agent")
+                        _persist_execution(result, started_at, finished_at, triggered_by, server.id)
+                    except Exception as persist_exc:
+                        logger.warning("Failed to persist fleet job execution: %s", persist_exc)
 
     except WebSocketDisconnect:
         logger.info("Agent disconnected: server_id=%s", server.id)
